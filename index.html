@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕐 Banco de Horas </title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            max-width: 1000px; margin: 0 auto; padding: 20px; 
+            background: linear-gradient(135deg, #c0c2ca 0%, #7776a165 100%); 
+            min-height: 100vh; color: #333;
+        }
+        .container { background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); padding: 30px; margin: 20px 0; }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; font-size: 1em; }
+        .info { text-align: center; background: #e8f4fd; padding: 15px; border-radius: 10px; margin-bottom: 30px; font-size: 1.1em; }
+        .section { 
+            background: #f8f9fa; margin-bottom: 25px; padding: 25px; border-radius: 15px; 
+            border: 2px solid #929496; box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .section h2 { color: #2c3e50; margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        label { display: block; margin: 5px 0; font-weight: 500; color: #555; }
+        input, button { 
+            width: 100%; padding: 5px; margin: 4px 0; font-size: 8px; border: 1px solid #ddd; 
+            border-radius: 5px; transition: all 0.3s; box-sizing: border-box;
+        }
+        input:focus { border-color: #3498db; outline: none; box-shadow: 0 0 10px rgba(52,152,219,0.3); }
+        button { 
+            background: linear-gradient(45deg, #3498db, #2980b9); color: white; border: none; 
+            font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(52,152,219,0.3); }
+        .horas-display { font-size: 1em; font-weight: bold; padding: 5px; background: white; border-radius: 5px; text-align: center; margin: 5px 0; }
+        .detalhes-calc { background: #d4edda; padding: 15px; border-radius: 10px; margin: 10px 0; font-family: monospace; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; background: white; border-radius: 5px; overflow: hidden; box-shadow: 0 5px 10px rgba(0,0,0,0.1); }
+        th { background: linear-gradient(45deg, #34495e, #2c3e50); color: white; padding: 5px; font-weight: bold; }
+        td { padding: 4px; align-items: center; text-align: center; 
+            border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8f9fa; }
+        .total { 
+            font-size: 1em; font-weight: bold; text-align: center; padding: 10px; 
+            border-radius: 15px; margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .positivo { color: #27ae60 !important; }
+        .negativo { color: #e74c3c !important; }
+        .btn-limpar { background: linear-gradient(45deg, #e74c3c, #c0392b); margin-top: 15px; }
+        
+        @media (max-width: 768px) { 
+            body { padding: 5px; } 
+            .container { padding: 10px; margin: 10px 0; border-radius: 10px; } 
+            h1 { font-size: 1em; }
+            .section { padding: 10px; }
+            table { display: inline-table; overflow-x: hidden; white-space: nowrap; font-size: 10px; width: 100%; }
+            .total { font-size: 1em; padding: 5px; }
+            input, button { font-size: 12px; } /* Evita zoom automático no iOS */
+        }
+        .horarios-grid { display: grid; grid-template-columns: 0.5fr 0.5fr; gap: 5px; }
+        .horarios-grid label { margin: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕐 Banco de Horas</h1>  
+        
+        <div class="section">
+            <div onclick="toggleHorarios()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="margin: 0; text-align: left;">📅 Horários do Dia</h1> <small style="font-size: 0.5em; opacity: 0.7;">(Clique para exibir)</small>
+            </div>
+            <div id="conteudoHorarios" style="display: none;">
+            <div onclick="toggleSaldo()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 13px;">➕ Saldo Anterior</div> <small style="font-size: 0.5em; opacity: 0.7;">(Clique para exibir)</small>
+            </div>
+            <div id="conteudoSaldo" style="display: none;">
+                <label>Informe o saldo inicial:
+                    <input type="text"  id="saldoAnterior" placeholder="Ex: 10:30 ou -5.5" oninput="salvarSaldoAnterior()">
+                </label>
+                <label>Percentual Extra (%):
+                    <input type="number" id="percentualExtra" value="50" placeholder="Ex: 50" oninput="salvarPercentual()">
+                </label>
+            
+        </div>
+            
+                <label>Data: <input type="date" id="dataRegistro" onchange="calcularDia()"></label>
+
+            <div class="horarios-grid">
+                <label>Entrada Manhã: <input type="time" id="inicio1" value="07:00" oninput="calcularDia()"></label>
+                <label>Saída Almoço: <input type="time" id="fim1" value="12:00" oninput="calcularDia()"></label>
+                <label>Retorno Almoço: <input type="time" id="inicio2" value="13:00" oninput="calcularDia()"></label>
+                <label>Saída Tarde: <input type="time" id="fim2" value="16:00" oninput="calcularDia()"></label>
+            </div>
+            <div id="horasDia" class="horas-display">Horas trabalhadas: 7h 0min</div>
+            <button onclick="salvarRegistro()">💾 Salvar</button>
+            
+            <div id="totalBanco" class="total">Total Banco: 0h 0min</div>
+            </div>
+        </div>
+
+        
+        <div class="section">
+            <div onclick="toggleSaldo2()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                <strong>📅 Histórico</strong> <small style="font-size: 0.5em; opacity: 0.7;">(Clique para exibir)</small>
+            </div>
+            <div id="historico" style="display: none;">
+            
+            <table id="tabelaRegistros">
+                <thead><tr><th>Data</th><th>H. dia</th><th>Banco</th><th>Ações</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <button class="btn-limpar" onclick="limparHistorico()">🗑️ Limpar Histórico</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div onclick="toggleSaldo3()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                <strong>💸 Calculadora de Valor (CLT)</strong> <small style="font-size: 0.5em; opacity: 0.7;">(Clique para exibir)</small>
+            </div>
+            <div id="calculadora" style="display: none;">
+            
+            <div class="horarios-grid">
+                <label>Salário Base (R$): <input type="number" id="calcSalario" placeholder="Ex: 2500.00"></label>
+                <label>Divisor Mensal: <input type="number" id="calcDivisor" value="220" placeholder="Padrão 220"></label>
+                <label>Qtd. Horas (HH:MM): <input type="text" id="calcHoras" placeholder="Ex: 10:30"></label>
+                <label>% Adicional: <input type="number" id="calcPercentual" value="50" placeholder="50"></label>
+                <label>Dias Úteis: <input type="number" id="calcDiasUteis" value="25" placeholder="Ex: 25"></label>
+                <label>Dom/Feriados: <input type="number" id="calcDomingosFeriados" value="5" placeholder="Ex: 5"></label>
+            </div>
+            <button onclick="calcularValorExtra()">💰 Calcular Valor a Receber</button>
+            <div id="resultadoValor" class="total" style="display:none; background: #d4edda; color: #155724; font-size: 1.2em;"></div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <script>
+        let registros = JSON.parse(localStorage.getItem('bancoHoras')) || [];
+        const FATOR_NOTURNO = 60 / 52.5; // Fator de redução (aprox 1.1428)
+
+        function formatHoras(minutos) {
+            const sinal = minutos < 0 ? '-' : '';
+            const absMin = Math.abs(minutos);
+            const h = Math.floor(absMin / 60);
+            const m = ('0' + (absMin % 60)).slice(-2);
+            return `${sinal}${h}:${m}`;
+        }
+
+        function formatData(dataISO) {
+            if (!dataISO) return '';
+            const [ano, mes, dia] = dataISO.split('-');
+            return `${dia}/${mes}/${ano}`;
+        }
+
+        function minutosFromTime(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function obterJornadaPorData(dataStr) {
+            if (!dataStr) return 480; // Padrão 8h (480 min) se não houver data
+            const [ano, mes, dia] = dataStr.split('-').map(Number);
+            const dataObj = new Date(ano, mes - 1, dia);
+            return dataObj.getDay() === 6 ? 240 : 480; // Sábado (6) = 4h (240 min), Outros = 8h
+        }
+
+        function calcularJornada(i1, f1, i2, f2) {
+            const m_i1 = minutosFromTime(i1);
+            const m_f1 = minutosFromTime(f1);
+            const m_i2 = minutosFromTime(i2);
+            const m_f2 = minutosFromTime(f2);
+
+            if (isNaN(m_i1) || isNaN(m_f1) || isNaN(m_i2) || isNaN(m_f2)) return null;
+
+            // Lógica para turnos que viram a noite (ajuste cronológico)
+            let start1 = m_i1;
+            let end1 = m_f1 < start1 ? m_f1 + 1440 : m_f1;
+            
+            let start2 = m_i2;
+            // Se o inicio do 2º período for menor que o fim do 1º, assume dia seguinte
+            if (start2 < end1) start2 += 1440; 
+            
+            let end2 = m_f2;
+            if (end2 < start2) end2 += 1440;
+
+            let minutosNormais = 0;
+            let minutosNoturnos = 0;
+
+            // Verifica cada minuto trabalhado se é noturno (22:00 - 05:00)
+            const verificarNoturno = (minuto) => {
+                const mDia = minuto % 1440;
+                return (mDia >= 1320 || mDia < 300);
+            };
+
+            for (let m = start1; m < end1; m++) verificarNoturno(m) ? minutosNoturnos++ : minutosNormais++;
+            for (let m = start2; m < end2; m++) verificarNoturno(m) ? minutosNoturnos++ : minutosNormais++;
+
+            const totalComputado = minutosNormais + (minutosNoturnos * FATOR_NOTURNO);
+            
+            return {
+                trabalhadoMin: totalComputado,
+                noturnos: minutosNoturnos
+            };
+        }
+
+        function calcularDia() {
+            const i1 = document.getElementById('inicio1').value;
+            const f1 = document.getElementById('fim1').value;
+            const i2 = document.getElementById('inicio2').value;
+            const f2 = document.getElementById('fim2').value;
+
+            const resultado = calcularJornada(i1, f1, i2, f2);
+
+            if (!resultado) {
+                document.getElementById('horasDia').textContent = `Preencha os horários`;
+                document.getElementById('horasDia').className = 'horas-display';
+                return;
+            }
+
+            const totalEfetivo = resultado.trabalhadoMin;
+            const jornadaPadrao = obterJornadaPorData(document.getElementById('dataRegistro').value);
+
+            let bancoDiaMin = totalEfetivo - jornadaPadrao;
+            if (bancoDiaMin > 0) {
+                const fator = 1 + (parseFloat(document.getElementById('percentualExtra').value) || 0) / 100;
+                bancoDiaMin = Math.round(bancoDiaMin * fator);
+            }
+            
+            let textoInfo = `Banco dia: ${formatHoras(bancoDiaMin)}`;
+            if (resultado.noturnos > 0) {
+                textoInfo += ` (Inclui ${formatHoras(resultado.noturnos)} noturnas)`;
+            }
+            document.getElementById('horasDia').textContent = textoInfo;
+            document.getElementById('horasDia').className = bancoDiaMin >= 0 ? 'horas-display positivo' : 'horas-display negativo';
+        }
+
+        function salvarRegistro() {
+            const data = document.getElementById('dataRegistro').value;
+            if (!data) return alert('❌ Selecione a data!');
+
+            const i1 = document.getElementById('inicio1').value;
+            const f1 = document.getElementById('fim1').value;
+            const i2 = document.getElementById('inicio2').value;
+            const f2 = document.getElementById('fim2').value;
+
+            const resultado = calcularJornada(i1, f1, i2, f2);
+            if (!resultado) {
+                return alert('❌ Horários inválidos!');
+            }
+            
+            calcularDia(); // Atualiza a visualização dos cálculos na tela antes de salvar
+
+            const horasDiaMin = resultado.trabalhadoMin;
+            const jornadaPadrao = obterJornadaPorData(data);
+            const totalEfetivo = horasDiaMin;
+            let bancoDiaMin = totalEfetivo - jornadaPadrao;
+            if (bancoDiaMin > 0) {
+                const fator = 1 + (parseFloat(document.getElementById('percentualExtra').value) || 0) / 100;
+                bancoDiaMin = Math.round(bancoDiaMin * fator);
+            }
+
+            registros.unshift({data, horasDia: horasDiaMin, bancoDia: bancoDiaMin, times: {i1, f1, i2, f2}});
+            localStorage.setItem('bancoHoras', JSON.stringify(registros));
+            atualizarTabela();
+            document.getElementById('dataRegistro').value = '';
+            alert(`✅ Salvo! Banco dia: ${formatHoras(bancoDiaMin)}`);
+        }
+
+        function limparHistorico() {
+            if (confirm('🗑️ Limpar TODO histórico?')) {
+                registros = [];
+                localStorage.removeItem('bancoHoras');
+                atualizarTabela();
+                alert('✅ Histórico limpo!');
+            }
+        }
+
+        function salvarSaldoAnterior() {
+            const saldoHoras = document.getElementById('saldoAnterior').value;
+            localStorage.setItem('saldoAnteriorHoras', saldoHoras);
+            atualizarTabela();
+        }
+
+        function salvarPercentual() {
+            localStorage.setItem('percentualExtra', document.getElementById('percentualExtra').value);
+            calcularDia();
+        }
+
+        function toggleSaldo() {
+            const div = document.getElementById('conteudoSaldo');
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleSaldo2() {
+            const div = document.getElementById('historico');
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        }
+        function toggleSaldo3() {
+            const div = document.getElementById('calculadora');
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleHorarios() {
+            const div = document.getElementById('conteudoHorarios');
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function atualizarTabela() {
+            // Ordena os registros da data mais recente para a mais antiga
+            registros.sort((a, b) => new Date(b.data) - new Date(a.data));
+
+            const tbody = document.querySelector('#tabelaRegistros tbody');
+            tbody.innerHTML = '';
+            let totalMin = 0;
+
+            const saldoStr = localStorage.getItem('saldoAnteriorHoras') || '0';
+            
+            let saldoMin = 0;
+            // Verifica se o usuário digitou no formato de relógio (ex: 10:30)
+            if (saldoStr.includes(':')) {
+                const parts = saldoStr.split(':');
+                const h = parseInt(parts[0], 10) || 0;
+                const m = parseInt(parts[1], 10) || 0;
+                saldoMin = (Math.abs(h) * 60) + Math.abs(m);
+                if (saldoStr.trim().startsWith('-')) saldoMin = -saldoMin;
+            } else {
+                // Formato decimal (ex: 1.5 = 90min)
+                const val = parseFloat(saldoStr.replace(',', '.')) || 0;
+                saldoMin = Math.round(val * 60);
+            }
+            
+            totalMin += saldoMin;
+
+            registros.forEach((reg, index) => {
+                totalMin += reg.bancoDia;
+                const row = tbody.insertRow();
+                const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
+                row.innerHTML = `
+                    <td>${formatData(reg.data)}</td>
+                    <td>${formatHoras(reg.horasDia)}</td>
+                    <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
+                    <td>
+                        <button onclick="editarRegistro(${index})" style="padding: 2px 5px; margin: 0; background: #f39c12; width: auto; margin-right: 2px;" title="Editar">✏️</button>
+                        <button onclick="excluirRegistro(${index})" style="padding: 2px 5px; margin: 0; background: #e74c3c; width: auto;" title="Excluir">🗑️</button>
+                    </td>
+                `;
+            });
+
+            const totalElement = document.getElementById('totalBanco');
+            const classeTotal = totalMin >= 0 ? 'total positivo' : 'total negativo';
+            totalElement.innerHTML = `Total Banco: <strong>${formatHoras(totalMin)}</strong>`;
+            totalElement.className = classeTotal;
+        }
+
+        function editarRegistro(index) {
+            const reg = registros[index];
+            document.getElementById('dataRegistro').value = reg.data;
+
+            if (reg.times) {
+                document.getElementById('inicio1').value = reg.times.i1;
+                document.getElementById('fim1').value = reg.times.f1;
+                document.getElementById('inicio2').value = reg.times.i2;
+                document.getElementById('fim2').value = reg.times.f2;
+            } else {
+                alert('⚠️ Registro antigo sem horários salvos. Verifique os horários no painel.');
+            }
+
+            calcularDia(); // Atualiza a visualização dos cálculos
+            registros.splice(index, 1); // Remove para permitir re-salvar
+            localStorage.setItem('bancoHoras', JSON.stringify(registros));
+            atualizarTabela();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function excluirRegistro(index) {
+            if (confirm('🗑️ Deseja excluir este registro?')) {
+                registros.splice(index, 1);
+                localStorage.setItem('bancoHoras', JSON.stringify(registros));
+                atualizarTabela();
+            }
+        }
+
+        function calcularValorExtra() {
+            const salario = parseFloat(document.getElementById('calcSalario').value.replace(',', '.'));
+            const divisor = parseFloat(document.getElementById('calcDivisor').value);
+            const horasStr = document.getElementById('calcHoras').value;
+            const percentual = parseFloat(document.getElementById('calcPercentual').value);
+            const diasUteis = parseFloat(document.getElementById('calcDiasUteis').value);
+            const domingos = parseFloat(document.getElementById('calcDomingosFeriados').value);
+
+            if (!salario || !divisor || !horasStr) return alert('Preencha Salário, Divisor e Horas!');
+
+            // Converte HH:MM para horas decimais
+            const parts = horasStr.split(':');
+            const h = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) || 0;
+            const totalHorasDecimais = h + (m / 60);
+
+            const valorHoraBase = salario / divisor;
+            const valorHoraExtra = valorHoraBase * (1 + (percentual / 100));
+            const totalHE = valorHoraExtra * totalHorasDecimais;
+            const valorDSR = (totalHE / (diasUteis || 1)) * (domingos || 0);
+            const totalReceber = totalHE + valorDSR;
+
+            const divRes = document.getElementById('resultadoValor');
+            divRes.style.display = 'block';
+            divRes.innerHTML = `Valor Hora Base: ${valorHoraBase.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
+                                Valor Hora Extra (${percentual}%): ${valorHoraExtra.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
+                                Total HE: ${totalHE.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
+                                DSR (${domingos}/${diasUteis}): ${valorDSR.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
+                                --------------------------<br>
+                                <strong>A Receber: ${totalReceber.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</strong>`;
+        }
+
+        // Inicializar
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('dataRegistro').value = hoje;
+
+        const saldoSalvo = localStorage.getItem('saldoAnteriorHoras') || '';
+        document.getElementById('saldoAnterior').value = saldoSalvo;
+
+        const percSalvo = localStorage.getItem('percentualExtra') || '50';
+        document.getElementById('percentualExtra').value = percSalvo;
+
+        calcularDia();
+        atualizarTabela();
+    </script>
+</body>
+</html>
