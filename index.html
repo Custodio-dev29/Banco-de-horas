@@ -134,7 +134,8 @@
                 <label>Percentual Extra (%):
                     <input type="number" id="percentualExtra" value="50" placeholder="Ex: 50" oninput="salvarPercentual()">
                 </label>
-                 <label>Jornada do Dia (HH:MM): <input type="text" id="jornadaDia" placeholder="Ex: 08:00" oninput="calcularDia(); localStorage.setItem('jornadaDiaHoras', this.value);"></label>
+                 <label>Jornada Semana (HH:MM): <input type="text" id="jornadaDia" placeholder="Ex: 08:00" oninput="calcularDia(); localStorage.setItem('jornadaDiaHoras', this.value);"></label>
+                 <label>Jornada Fim de Semana (HH:MM): <input type="text" id="jornadaFds" placeholder="Ex: 04:00" oninput="calcularDia(); localStorage.setItem('jornadaFdsHoras', this.value);"></label>
 
                 <button class="btn-limpar" onclick="limparHistorico()">🗑️ Limpar Histórico</button>
             
@@ -165,7 +166,9 @@
 
     <script>
         let registros = JSON.parse(localStorage.getItem('bancoHoras')) || [];
-        const FATOR_NOTURNO = 60 / 52.5; // Fator de redução (aprox 1.1428)
+        const FATOR_NOTURNO = 60 / 52.5;
+        const JORNADA_SEMANA = 480;
+        const JORNADA_FIM_DE_SEMANA = 240;
 
         function formatHoras(minutos) {
             const sinal = minutos < 0 ? '-' : '';
@@ -186,20 +189,39 @@
             return h * 60 + m;
         }
 
-        function obterJornadaPorData(dataStr) {
-            if (!dataStr) return 480;
+        function _getDiaSemana(dataStr) {
+            if (!dataStr) return -1;
             const [ano, mes, dia] = dataStr.split('-').map(Number);
-            const dataObj = new Date(ano, mes - 1, dia);
-            const diaSemana = dataObj.getDay();
-            return (diaSemana === 0 || diaSemana === 6) ? 240 : 480; // Dom(0) e Sáb(6) = 4h
+            return new Date(ano, mes - 1, dia).getDay();
+        }
+
+        function obterJornadaPorData(dataStr) {
+            const diaSemana = _getDiaSemana(dataStr);
+            if (diaSemana === -1) return JORNADA_SEMANA;
+            return (diaSemana === 0 || diaSemana === 6) ? JORNADA_FIM_DE_SEMANA : JORNADA_SEMANA;
         }
 
         function isFinalDeSemana(dataStr) {
-            if (!dataStr) return false;
-            const [ano, mes, dia] = dataStr.split('-').map(Number);
-            const dataObj = new Date(ano, mes - 1, dia);
-            const d = dataObj.getDay();
+            const d = _getDiaSemana(dataStr);
             return d === 0 || d === 6;
+        }
+
+        function _parseJornadaInput(valor) {
+            if (!valor) return null;
+            if (valor.includes(':')) {
+                const p = valor.split(':');
+                return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+            }
+            return Math.round(parseFloat(valor.replace(',', '.')) * 60);
+        }
+
+        function obterJornadaPadrao(data) {
+            const isFds = isFinalDeSemana(data);
+            const campoId = isFds ? 'jornadaFds' : 'jornadaDia';
+            const valorInput = document.getElementById(campoId).value.trim();
+            const parsed = _parseJornadaInput(valorInput);
+            if (parsed !== null) return parsed;
+            return obterJornadaPorData(data);
         }
 
         function calcularJornada(i1, f1, i2, f2) {
@@ -259,25 +281,14 @@
 
             const dataRef = document.getElementById('dataRegistro').value;
             let totalEfetivo = totalComputado;
-            if (isFinalDeSemana(dataRef) && totalComputado > 240) {
+            if (isFinalDeSemana(dataRef) && totalComputado > JORNADA_FIM_DE_SEMANA) {
                 const saidaAlmoco = minutosFromTime(f1);
                 const retornoAlmoco = minutosFromTime(i2);
                 const duracaoAlmoco = retornoAlmoco >= saidaAlmoco ? retornoAlmoco - saidaAlmoco : (1440 - saidaAlmoco) + retornoAlmoco;
                 totalEfetivo -= duracaoAlmoco;
             }
 
-            const jornadaInput = document.getElementById('jornadaDia').value.trim();
-            let jornadaPadrao;
-            if (jornadaInput) {
-                if (jornadaInput.includes(':')) {
-                    const p = jornadaInput.split(':');
-                    jornadaPadrao = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
-                } else {
-                    jornadaPadrao = Math.round(parseFloat(jornadaInput.replace(',', '.')) * 60);
-                }
-            } else {
-                jornadaPadrao = obterJornadaPorData(document.getElementById('dataRegistro').value);
-            }
+            const jornadaPadrao = obterJornadaPadrao(document.getElementById('dataRegistro').value);
 
             let bancoDiaMin = totalEfetivo - jornadaPadrao;
             if (bancoDiaMin > 0) {
@@ -311,24 +322,13 @@
             calcularDia();
 
             let horasDiaMin = resultado.trabalhadoMin;
-            if (isFinalDeSemana(data) && horasDiaMin > 240) {
+            if (isFinalDeSemana(data) && horasDiaMin > JORNADA_FIM_DE_SEMANA) {
                 const saidaAlmoco = minutosFromTime(f1);
                 const retornoAlmoco = minutosFromTime(i2);
                 const duracaoAlmoco = retornoAlmoco >= saidaAlmoco ? retornoAlmoco - saidaAlmoco : (1440 - saidaAlmoco) + retornoAlmoco;
                 horasDiaMin -= duracaoAlmoco;
             }
-            const jornadaInput = document.getElementById('jornadaDia').value.trim();
-            let jornadaPadrao;
-            if (jornadaInput) {
-                if (jornadaInput.includes(':')) {
-                    const p = jornadaInput.split(':');
-                    jornadaPadrao = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
-                } else {
-                    jornadaPadrao = Math.round(parseFloat(jornadaInput.replace(',', '.')) * 60);
-                }
-            } else {
-                jornadaPadrao = obterJornadaPorData(data);
-            }
+            const jornadaPadrao = obterJornadaPadrao(data);
             let bancoDiaMin = horasDiaMin - jornadaPadrao;
             if (bancoDiaMin > 0) {
                 const fator = 1 + (parseFloat(document.getElementById('percentualExtra').value) || 0) / 100;
@@ -459,24 +459,13 @@
             if (!resultado) return alert('❌ Horários inválidos!');
 
             let horasDiaMin = resultado.trabalhadoMin;
-            if (isFinalDeSemana(data) && horasDiaMin > 240) {
+            if (isFinalDeSemana(data) && horasDiaMin > JORNADA_FIM_DE_SEMANA) {
                 const saidaAlmoco = minutosFromTime(f1);
                 const retornoAlmoco = minutosFromTime(i2);
                 const duracaoAlmoco = retornoAlmoco >= saidaAlmoco ? retornoAlmoco - saidaAlmoco : (1440 - saidaAlmoco) + retornoAlmoco;
                 horasDiaMin -= duracaoAlmoco;
             }
-            const jornadaInput = document.getElementById('jornadaDia').value.trim();
-            let jornadaPadrao;
-            if (jornadaInput) {
-                if (jornadaInput.includes(':')) {
-                    const p = jornadaInput.split(':');
-                    jornadaPadrao = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
-                } else {
-                    jornadaPadrao = Math.round(parseFloat(jornadaInput.replace(',', '.')) * 60);
-                }
-            } else {
-                jornadaPadrao = obterJornadaPorData(data);
-            }
+            const jornadaPadrao = obterJornadaPadrao(data);
             let bancoDiaMin = horasDiaMin - jornadaPadrao;
             if (bancoDiaMin > 0) {
                 const fator = 1 + (parseFloat(document.getElementById('percentualExtra').value) || 0) / 100;
@@ -544,6 +533,8 @@
 
         const jornadaSalva = localStorage.getItem('jornadaDiaHoras') || '';
         document.getElementById('jornadaDia').value = jornadaSalva;
+        const jornadaFdsSalva = localStorage.getItem('jornadaFdsHoras') || '04:00';
+        document.getElementById('jornadaFds').value = jornadaFdsSalva;
 
         calcularDia();
         atualizarTabela();
