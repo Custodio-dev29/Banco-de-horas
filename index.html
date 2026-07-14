@@ -74,7 +74,8 @@
         .horarios-grid label { margin: 0; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 5px; overflow: hidden; box-shadow: 0 5px 10px rgba(0,0,0,0.1); }
-        th { background: linear-gradient(45deg, #34495e, #2c3e50); color: white; padding: 8px; font-weight: bold; }
+        th { background: linear-gradient(45deg, #34495e, #2c3e50); color: white; padding: 8px; font-weight: bold; user-select: none; }
+        th:hover { background: linear-gradient(45deg, #2c3e50, #1a252f); }
         td { padding: 6px; text-align: center; border-bottom: 1px solid #eee; }
         tr:hover { background: #e8f4fd; }
 
@@ -85,6 +86,11 @@
         .positivo { color: #27ae60 !important; }
         .negativo { color: #e74c3c !important; }
         .btn-limpar { background: linear-gradient(45deg, #e74c3c, #c0392b); margin-top: 15px; }
+
+        #filtroHistorico {
+            width: 100%; padding: 10px; margin-bottom: 15px; font-size: 14px;
+            border: 2px solid #3498db; border-radius: 8px; background: #f0f8ff;
+        }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1001; justify-content: center; align-items: center; }
         .modal-overlay.ativo { display: flex; }
@@ -151,8 +157,14 @@
         <!-- Painel Histórico -->
         <div class="painel" id="painelHistorico">
             <div class="section">
+                <input type="text" id="filtroHistorico" placeholder="🔍 Filtrar por data, valor..." oninput="aplicarFiltro()">
                 <table id="tabelaRegistros">
-                    <thead><tr><th>Data</th><th>H. dia</th><th>Banco</th></tr></thead>
+                    <thead><tr>
+                        <th onclick="sortTabela(0)" id="th0" style="cursor:pointer">Data ▼</th>
+                        <th onclick="sortTabela(1)" id="th1" style="cursor:pointer">H. dia</th>
+                        <th onclick="sortTabela(2)" id="th2" style="cursor:pointer">Banco</th>
+                        <th onclick="sortTabela(3)" id="th3" style="cursor:pointer">Saldo</th>
+                    </tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -218,6 +230,8 @@
         const FATOR_NOTURNO = 60 / 52.5;
         const JORNADA_SEMANA = 480;
         const JORNADA_FIM_DE_SEMANA = 240;
+
+        let sortEstado = { coluna: 0, dir: 'desc' };
 
         // Menu
         function abrirMenu() {
@@ -425,8 +439,33 @@
             calcularDia();
         }
 
+        function sortTabela(coluna) {
+            if (sortEstado.coluna === coluna) {
+                sortEstado.dir = sortEstado.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortEstado.coluna = coluna;
+                sortEstado.dir = (coluna === 0 || coluna === 3) ? 'desc' : 'asc';
+            }
+            document.querySelectorAll('#tabelaRegistros th').forEach((th, i) => {
+                th.textContent = th.textContent.replace(/ [▲▼]/g, '');
+                if (i === coluna) th.textContent += sortEstado.dir === 'asc' ? ' ▲' : ' ▼';
+            });
+            atualizarTabela();
+        }
+
         function atualizarTabela() {
-            registros.sort((a, b) => new Date(b.data) - new Date(a.data));
+            const copia = [...registros];
+            const dir = sortEstado.dir === 'asc' ? 1 : -1;
+
+            if (sortEstado.coluna === 0) {
+                copia.sort((a, b) => dir * (new Date(a.data) - new Date(b.data)));
+            } else if (sortEstado.coluna === 1) {
+                copia.sort((a, b) => dir * (a.horasDia - b.horasDia));
+            } else if (sortEstado.coluna === 2) {
+                copia.sort((a, b) => dir * (a.bancoDia - b.bancoDia));
+            } else if (sortEstado.coluna === 3) {
+                copia.sort((a, b) => dir * (a.data.localeCompare(b.data)));
+            }
 
             const tbody = document.querySelector('#tabelaRegistros tbody');
             tbody.innerHTML = '';
@@ -447,25 +486,63 @@
             }
 
             totalMin += saldoMin;
-
-            registros.forEach((reg, index) => {
+            const saldos = [];
+            copia.forEach(reg => {
                 totalMin += reg.bancoDia;
-                const row = tbody.insertRow();
-                row.style.cursor = 'pointer';
-                row.onclick = () => abrirModal(index);
-                const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
-                row.innerHTML = `
-                    <td>${formatData(reg.data)}</td>
-                    <td>${formatHoras(reg.horasDia)}</td>
-                    <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
-                `;
+                saldos.push(totalMin);
             });
+
+            if (sortEstado.coluna === 3) {
+                const indices = copia.map((_, i) => i);
+                indices.sort((a, b) => dir * (saldos[a] - saldos[b]));
+                tbody.innerHTML = '';
+                indices.forEach(i => {
+                    const reg = copia[i];
+                    const row = tbody.insertRow();
+                    row.style.cursor = 'pointer';
+                    const origIdx = registros.indexOf(reg);
+                    row.onclick = () => abrirModal(origIdx);
+                    const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
+                    const classeSaldo = saldos[i] >= 0 ? 'positivo' : 'negativo';
+                    row.innerHTML = `
+                        <td>${formatData(reg.data)}</td>
+                        <td>${formatHoras(reg.horasDia)}</td>
+                        <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
+                        <td class="${classeSaldo}">${formatHoras(saldos[i])}</td>
+                    `;
+                });
+            } else {
+                copia.forEach((reg, i) => {
+                    const row = tbody.insertRow();
+                    row.style.cursor = 'pointer';
+                    const origIdx = registros.indexOf(reg);
+                    row.onclick = () => abrirModal(origIdx);
+                    const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
+                    const classeSaldo = saldos[i] >= 0 ? 'positivo' : 'negativo';
+                    row.innerHTML = `
+                        <td>${formatData(reg.data)}</td>
+                        <td>${formatHoras(reg.horasDia)}</td>
+                        <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
+                        <td class="${classeSaldo}">${formatHoras(saldos[i])}</td>
+                    `;
+                });
+            }
 
             // Atualiza total nos dois lugares
             const classeTotal = totalMin >= 0 ? 'positivo' : 'negativo';
             const el = document.getElementById('totalBanco');
             el.innerHTML = `Total Banco: <strong>${formatHoras(totalMin)}</strong>`;
             el.className = `total ${classeTotal}`;
+        }
+
+        function aplicarFiltro() {
+            const termo = document.getElementById('filtroHistorico').value.toLowerCase();
+            const tbody = document.querySelector('#tabelaRegistros tbody');
+            const linhas = tbody.querySelectorAll('tr');
+            linhas.forEach(linha => {
+                const texto = linha.textContent.toLowerCase();
+                linha.style.display = texto.includes(termo) ? '' : 'none';
+            });
         }
 
         function abrirModal(index) {
