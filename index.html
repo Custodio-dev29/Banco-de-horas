@@ -3,61 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🕐 Banco de Horas </title>
+    <title>🕐 Banco de Horas</title>
     <style>
-        * { box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            max-width: 1000px; margin: 0 auto; padding: 20px; 
-            background: linear-gradient(135deg, #c0c2ca 0%, #7776a165 100%); 
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px; margin: 0 auto; padding: 20px;
+            background: linear-gradient(135deg, #c0c2ca 0%, #7776a165 100%);
             min-height: 100vh; color: #333;
         }
         .container { background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); padding: 30px; margin: 20px 0; }
-        h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; font-size: 1em; }
-        .info { text-align: center; background: #e8f4fd; padding: 15px; border-radius: 10px; margin-bottom: 30px; font-size: 1.1em; }
-        .section { 
-            background: #f8f9fa; margin-bottom: 25px; padding: 25px; border-radius: 15px; 
+
+        /* Topo com menu sanduíche e título */
+        .topo {
+            display: flex; align-items: center; gap: 15px;
+            margin-bottom: 10px;
+        }
+        .menu-btn {
+            font-size: 24px; cursor: pointer; background: none; border: none;
+            width: auto; padding: 5px 10px; color: #2c3e50;
+        }
+        .menu-btn:hover { transform: none; }
+        h1 { text-align: center; color: #2c3e50; font-size: 1.2em; flex: 1; }
+
+        /* Menu sanduíche */
+        .menu-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 999;
+        }
+        .menu-overlay.ativo { display: block; }
+        .menu-lateral {
+            position: fixed; top: 0; left: -280px; width: 260px; height: 100%;
+            background: white; z-index: 1000; transition: left 0.3s;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.2); padding: 20px;
+            overflow-y: auto;
+        }
+        .menu-lateral.aberto { left: 0; }
+        .menu-lateral h3 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 15px; }
+        .menu-item {
+            display: block; width: 100%; padding: 12px 10px; margin: 5px 0;
+            text-align: left; background: #f8f9fa; border: 1px solid #ddd;
+            border-radius: 8px; cursor: pointer; font-size: 14px; color: #333;
+            text-transform: none; letter-spacing: normal;
+        }
+        .menu-item:hover { background: #e8f4fd; transform: none; box-shadow: none; }
+
+        /* Painéis de conteúdo */
+        .painel { display: none; }
+        .painel.ativo { display: block; }
+
+        .section {
+            background: #f8f9fa; margin-bottom: 25px; padding: 25px; border-radius: 15px;
             border: 2px solid #929496; box-shadow: 0 5px 15px rgba(0,0,0,0.08);
         }
-        .section h2 { color: #2c3e50; margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .section h2 { color: #2c3e50; margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 15px; }
         label { display: block; margin: 5px 0; font-weight: 500; color: #555; }
-        input, button { 
-            width: 100%; padding: 5px; margin: 4px 0; font-size: 8px; border: 1px solid #ddd; 
+        input, button {
+            width: 100%; padding: 8px; margin: 4px 0; font-size: 14px; border: 1px solid #ddd;
             border-radius: 5px; transition: all 0.3s; box-sizing: border-box;
         }
         input:focus { border-color: #3498db; outline: none; box-shadow: 0 0 10px rgba(52,152,219,0.3); }
-        button { 
-            background: linear-gradient(45deg, #3498db, #2980b9); color: white; border: none; 
+        button {
+            background: linear-gradient(45deg, #3498db, #2980b9); color: white; border: none;
             font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
         }
         button:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(52,152,219,0.3); }
-        .horas-display { font-size: 1em; font-weight: bold; padding: 5px; background: white; border-radius: 5px; text-align: center; margin: 5px 0; }
-        .detalhes-calc { background: #d4edda; padding: 15px; border-radius: 10px; margin: 10px 0; font-family: monospace; }
-        table { width: 100%; border-collapse: collapse; margin-top: 5px; background: white; border-radius: 5px; overflow: hidden; box-shadow: 0 5px 10px rgba(0,0,0,0.1); }
-        th { background: linear-gradient(45deg, #34495e, #2c3e50); color: white; padding: 5px; font-weight: bold; }
-        td { padding: 4px; align-items: center; text-align: center; 
-            border-bottom: 1px solid #eee; }
+
+        .horas-display { font-size: 1em; font-weight: bold; padding: 10px; background: white; border-radius: 5px; text-align: center; margin: 10px 0; }
+        .horarios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .horarios-grid label { margin: 0; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 5px; overflow: hidden; box-shadow: 0 5px 10px rgba(0,0,0,0.1); }
+        th { background: linear-gradient(45deg, #34495e, #2c3e50); color: white; padding: 8px; font-weight: bold; user-select: none; }
+        th:hover { background: linear-gradient(45deg, #2c3e50, #1a252f); }
+        td { padding: 6px; text-align: center; border-bottom: 1px solid #eee; }
         tr:hover { background: #e8f4fd; }
-        .total { 
-            font-size: 1em; font-weight: bold; text-align: center; padding: 10px; 
-            border-radius: 15px; margin: 20px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+
+        .total {
+            font-size: 1.2em; font-weight: bold; text-align: center; padding: 5px;
+            border-radius: 15px; margin: 2px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
         .positivo { color: #27ae60 !important; }
         .negativo { color: #e74c3c !important; }
         .btn-limpar { background: linear-gradient(45deg, #e74c3c, #c0392b); margin-top: 15px; }
-        
-        @media (max-width: 768px) { 
-            body { padding: 5px; } 
-            .container { padding: 10px; margin: 10px 0; border-radius: 10px; } 
-            h1 { font-size: 1em; }
-            .section { padding: 10px; }
-            table { display: inline-table; overflow-x: hidden; white-space: nowrap; font-size: 10px; width: 100%; }
-            .total { font-size: 1em; padding: 5px; }
-            input, button { font-size: 12px; } /* Evita zoom automático no iOS */
+
+        #filtroHistorico {
+            width: 100%; padding: 10px; margin-bottom: 15px; font-size: 14px;
+            border: 2px solid #3498db; border-radius: 8px; background: #f0f8ff;
         }
-        .horarios-grid { display: grid; grid-template-columns: 0.5fr 0.5fr; gap: 5px; }
-        .horarios-grid label { margin: 0; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1001; justify-content: center; align-items: center; }
         .modal-overlay.ativo { display: flex; }
         .modal { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 450px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         .modal h2 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
@@ -66,86 +101,113 @@
         .btn-salvar { background: linear-gradient(45deg, #27ae60, #219a52); }
         .btn-excluir { background: linear-gradient(45deg, #e74c3c, #c0392b); }
         .btn-fechar { background: linear-gradient(45deg, #95a5a6, #7f8c8d); grid-column: 1 / -1; }
+
+        @media (max-width: 768px) {
+            body { padding: 5px; }
+            .container { padding: 15px; margin: 10px 0; border-radius: 10px; }
+            h1 { font-size: 1em; }
+            .section { padding: 15px; }
+            table { font-size: 12px; width: 100%; }
+            .total { font-size: 1.5em; padding: 5px; }
+            input, button { font-size: 12px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🕐 Banco de Horas</h1>  
-        
-        <div class="section">
-            <div onclick="toggleHorarios()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                <h1 style="margin: 0; text-align: left;">📅 Horários do Dia</h1> <small style="font-size: 0.5em; opacity: 0.7;">(Clique para exibir)</small>
-            </div>
-            <div id="conteudoHorarios" style="display: none;">
-                        
+        <!-- Topo -->
+        <div class="topo">
+            <button class="menu-btn" onclick="abrirMenu()">☰</button>
+            <h1>🕐 Banco de Horas</h1>
+            <div style="width:40px"></div>
+        </div>
+
+        <!-- Menu sanduíche -->
+        <div class="menu-overlay" id="menuOverlay" onclick="fecharMenu()"></div>
+        <div class="menu-lateral" id="menuLateral">
+            <h3>📋 Menu</h3>
+            <button class="menu-item" onclick="abrirPainel('principal')">🏠 Principal (Saldo)</button>
+            <button class="menu-item" onclick="abrirPainel('horarios')">📅 Lançar Horários</button>
+            <button class="menu-item" onclick="abrirPainel('historico')">📊 Histórico</button>
+            <button class="menu-item" onclick="abrirPainel('calculadora')">💸 Calculadora</button>
+            <button class="menu-item" onclick="abrirPainel('config')">⚙️ Configurações</button>
+        </div>
+
+        <!-- Saldo fixo no topo (sempre visível) -->
+        <div class="total" id="totalBanco">Total Banco: 0h 0min</div>
+
+        <!-- Painel Principal -->
+        <div class="painel ativo" id="painelPrincipal"></div>
+
+        <!-- Painel Lançar Horários -->
+        <div class="painel" id="painelHorarios">
+            <div class="section">
                 <label>Data: <input type="date" id="dataRegistro" onchange="calcularDia()"></label>
-               
-            <div class="horarios-grid">
-                <label>Entrada Manhã: <input type="time" id="inicio1" value="07:00" oninput="calcularDia()"></label>
-                <label>Saída Almoço: <input type="time" id="fim1" value="12:00" oninput="calcularDia()"></label>
-                <label>Retorno Almoço: <input type="time" id="inicio2" value="13:00" oninput="calcularDia()"></label>
-                <label>Saída Tarde: <input type="time" id="fim2" value="16:00" oninput="calcularDia()"></label>
-            </div>
-            <div id="horasDia" class="horas-display">Horas trabalhadas: 7h 0min</div>
-            <button onclick="salvarRegistro()">💾 Salvar</button>
-            
-                        </div>
-        </div>
-
-        
-        <div class="section">
-            <div onclick="toggleSaldo2()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                <strong>📅 Histórico</strong> <small style="font-size: 0.5em; opacity: 0.7;">(Clique para exibir)</small>
-            </div>
-            <div id="historico" style="display: none;">
-            <div id="totalBanco" class="total">Total Banco: 0h 0min</div>
-
-            <table id="tabelaRegistros">
-                <thead><tr><th>Data</th><th>H. dia</th><th>Banco</th></tr></thead>
-                <tbody></tbody>
-            </table>
-            
+                <div class="horarios-grid">
+                    <label>Entrada Manhã: <input type="time" id="inicio1" value="07:00" oninput="calcularDia()"></label>
+                    <label>Saída Almoço: <input type="time" id="fim1" value="12:00" oninput="calcularDia()"></label>
+                    <label>Retorno Almoço: <input type="time" id="inicio2" value="13:00" oninput="calcularDia()"></label>
+                    <label>Saída Tarde: <input type="time" id="fim2" value="16:00" oninput="calcularDia()"></label>
+                </div>
+                <div id="horasDia" class="horas-display">Preencha os horários</div>
+                <button onclick="salvarRegistro()">💾 Salvar</button>
             </div>
         </div>
 
-        <div class="section">
-            <div onclick="toggleSaldo3()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                <strong>💸 Calculadora</strong> <small style="font-size: 0.5em; opacity: 0.7;">(Clique para exibir)</small>
+        <!-- Painel Histórico -->
+        <div class="painel" id="painelHistorico">
+            <div class="section">
+                <input type="text" id="filtroHistorico" placeholder="🔍 Filtrar por data, valor..." oninput="aplicarFiltro()">
+                <table id="tabelaRegistros">
+                    <thead><tr>
+                        <th onclick="sortTabela(0)" id="th0" style="cursor:pointer">Data ▼</th>
+                        <th onclick="sortTabela(1)" id="th1" style="cursor:pointer">H. dia</th>
+                        <th onclick="sortTabela(2)" id="th2" style="cursor:pointer">Banco</th>
+                        <th onclick="sortTabela(3)" id="th3" style="cursor:pointer">Saldo</th>
+                    </tr></thead>
+                    <tbody></tbody>
+                </table>
             </div>
-            <div id="calculadora" style="display: none;">
-            
-            <div class="horarios-grid">
-                <label>Salário Base (R$): <input type="number" id="calcSalario" placeholder="Ex: 2500.00"></label>
-                <label>Divisor Mensal: <input type="number" id="calcDivisor" value="220" placeholder="Padrão 220"></label>
-                <label>Qtd. Horas (HH:MM): <input type="text" id="calcHoras" placeholder="Ex: 10:30"></label>
-                <label>% Adicional: <input type="number" id="calcPercentual" value="50" placeholder="50"></label>
-                <label>Dias Úteis: <input type="number" id="calcDiasUteis" value="25" placeholder="Ex: 25"></label>
-                <label>Dom/Feriados: <input type="number" id="calcDomingosFeriados" value="5" placeholder="Ex: 5"></label>
+        </div>
+
+        <!-- Painel Calculadora -->
+        <div class="painel" id="painelCalculadora">
+            <div class="section">
+                <div class="horarios-grid">
+                    <label>Salário Base (R$): <input type="number" id="calcSalario" placeholder="Ex: 2500.00"></label>
+                    <label>Divisor Mensal: <input type="number" id="calcDivisor" value="220" placeholder="Padrão 220"></label>
+                    <label>Qtd. Horas (HH:MM): <input type="text" id="calcHoras" placeholder="Ex: 10:30"></label>
+                    <label>% Adicional: <input type="number" id="calcPercentual" value="50" placeholder="50"></label>
+                    <label>Dias Úteis: <input type="number" id="calcDiasUteis" value="25" placeholder="Ex: 25"></label>
+                    <label>Dom/Feriados: <input type="number" id="calcDomingosFeriados" value="5" placeholder="Ex: 5"></label>
+                </div>
+                <button onclick="calcularValorExtra()">💰 Calcular Valor a Receber</button>
+                <div id="resultadoValor" class="total" style="display:none; background: #d4edda; color: #155724; font-size: 1.2em;"></div>
             </div>
-            <button onclick="calcularValorExtra()">💰 Calcular Valor a Receber</button>
-            <div id="resultadoValor" class="total" style="display:none; background: #d4edda; color: #155724; font-size: 1.2em;"></div>
-            <div onclick="toggleSaldo()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 13px;">➕ Saldo Anterior</div> <small style="font-size: 0.5em; opacity: 0.7;">(Clique para exibir)</small>
-            </div>
-            <div id="conteudoSaldo" style="display: none;">
-                <label>Informe o saldo inicial:
-                    <input type="text"  id="saldoAnterior" placeholder="Ex: 10:30 ou -5.5" oninput="salvarSaldoAnterior()">
+        </div>
+
+        <!-- Painel Configurações -->
+        <div class="painel" id="painelConfig">
+            <div class="section">
+                <label>Saldo Anterior:
+                    <input type="text" id="saldoAnterior" placeholder="Ex: 10:30 ou -5.5" oninput="salvarSaldoAnterior()">
                 </label>
                 <label>Percentual Extra (%):
                     <input type="number" id="percentualExtra" value="50" placeholder="Ex: 50" oninput="salvarPercentual()">
                 </label>
-                 <label>Jornada do Dia (HH:MM): <input type="text" id="jornadaDia" placeholder="Ex: 08:00" oninput="calcularDia(); localStorage.setItem('jornadaDiaHoras', this.value);"></label>
-
+                <label>Jornada Semana (HH:MM):
+                    <input type="text" id="jornadaDia" placeholder="Ex: 08:00" oninput="calcularDia(); localStorage.setItem('jornadaDiaHoras', this.value);">
+                </label>
+                <label>Jornada Fim de Semana (HH:MM):
+                    <input type="text" id="jornadaFds" placeholder="Ex: 04:00" oninput="calcularDia(); localStorage.setItem('jornadaFdsHoras', this.value);">
+                </label>
                 <button class="btn-limpar" onclick="limparHistorico()">🗑️ Limpar Histórico</button>
-            
             </div>
-    
         </div>
-            
-        </div>
-        </div>
+
     </div>
 
+    <!-- Modal Editar -->
     <div class="modal-overlay" id="modalEditar" onclick="fecharModal(event)">
         <div class="modal" onclick="event.stopPropagation()">
             <h2>Editar Registro</h2>
@@ -165,7 +227,27 @@
 
     <script>
         let registros = JSON.parse(localStorage.getItem('bancoHoras')) || [];
-        const FATOR_NOTURNO = 60 / 52.5; // Fator de redução (aprox 1.1428)
+        const FATOR_NOTURNO = 60 / 52.5;
+        const JORNADA_SEMANA = 480;
+        const JORNADA_FIM_DE_SEMANA = 240;
+
+        let sortEstado = { coluna: 0, dir: 'desc' };
+
+        // Menu
+        function abrirMenu() {
+            document.getElementById('menuOverlay').classList.add('ativo');
+            document.getElementById('menuLateral').classList.add('aberto');
+        }
+        function fecharMenu() {
+            document.getElementById('menuOverlay').classList.remove('ativo');
+            document.getElementById('menuLateral').classList.remove('aberto');
+        }
+        function abrirPainel(id) {
+            document.querySelectorAll('.painel').forEach(p => p.classList.remove('ativo'));
+            document.getElementById('painel' + id.charAt(0).toUpperCase() + id.slice(1)).classList.add('ativo');
+            fecharMenu();
+            if (id !== 'principal') atualizarTabela();
+        }
 
         function formatHoras(minutos) {
             const sinal = minutos < 0 ? '-' : '';
@@ -186,20 +268,39 @@
             return h * 60 + m;
         }
 
-        function obterJornadaPorData(dataStr) {
-            if (!dataStr) return 480;
+        function _getDiaSemana(dataStr) {
+            if (!dataStr) return -1;
             const [ano, mes, dia] = dataStr.split('-').map(Number);
-            const dataObj = new Date(ano, mes - 1, dia);
-            const diaSemana = dataObj.getDay();
-            return (diaSemana === 0 || diaSemana === 6) ? 240 : 480; // Dom(0) e Sáb(6) = 4h
+            return new Date(ano, mes - 1, dia).getDay();
+        }
+
+        function obterJornadaPorData(dataStr) {
+            const diaSemana = _getDiaSemana(dataStr);
+            if (diaSemana === -1) return JORNADA_SEMANA;
+            return (diaSemana === 0 || diaSemana === 6) ? JORNADA_FIM_DE_SEMANA : JORNADA_SEMANA;
         }
 
         function isFinalDeSemana(dataStr) {
-            if (!dataStr) return false;
-            const [ano, mes, dia] = dataStr.split('-').map(Number);
-            const dataObj = new Date(ano, mes - 1, dia);
-            const d = dataObj.getDay();
+            const d = _getDiaSemana(dataStr);
             return d === 0 || d === 6;
+        }
+
+        function _parseJornadaInput(valor) {
+            if (!valor) return null;
+            if (valor.includes(':')) {
+                const p = valor.split(':');
+                return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+            }
+            return Math.round(parseFloat(valor.replace(',', '.')) * 60);
+        }
+
+        function obterJornadaPadrao(data) {
+            const isFds = isFinalDeSemana(data);
+            const campoId = isFds ? 'jornadaFds' : 'jornadaDia';
+            const valorInput = document.getElementById(campoId).value.trim();
+            const parsed = _parseJornadaInput(valorInput);
+            if (parsed !== null) return parsed;
+            return obterJornadaPorData(data);
         }
 
         function calcularJornada(i1, f1, i2, f2) {
@@ -210,21 +311,18 @@
 
             if (isNaN(m_i1) || isNaN(m_f1) || isNaN(m_i2) || isNaN(m_f2)) return null;
 
-            // Lógica para turnos que viram a noite (ajuste cronológico)
             let start1 = m_i1;
             let end1 = m_f1 < start1 ? m_f1 + 1440 : m_f1;
-            
+
             let start2 = m_i2;
-            // Se o inicio do 2º período for menor que o fim do 1º, assume dia seguinte
-            if (start2 < end1) start2 += 1440; 
-            
+            if (start2 < end1) start2 += 1440;
+
             let end2 = m_f2;
             if (end2 < start2) end2 += 1440;
 
             let minutosNormais = 0;
             let minutosNoturnos = 0;
 
-            // Verifica cada minuto trabalhado se é noturno (22:00 - 05:00)
             const verificarNoturno = (minuto) => {
                 const mDia = minuto % 1440;
                 return (mDia >= 1320 || mDia < 300);
@@ -234,7 +332,7 @@
             for (let m = start2; m < end2; m++) verificarNoturno(m) ? minutosNoturnos++ : minutosNormais++;
 
             const totalComputado = minutosNormais + (minutosNoturnos * FATOR_NOTURNO);
-            
+
             return {
                 trabalhadoMin: totalComputado,
                 noturnos: minutosNoturnos
@@ -250,7 +348,7 @@
             const resultado = calcularJornada(i1, f1, i2, f2);
 
             if (!resultado) {
-                document.getElementById('horasDia').textContent = `Preencha os horários`;
+                document.getElementById('horasDia').textContent = 'Preencha os horários';
                 document.getElementById('horasDia').className = 'horas-display';
                 return;
             }
@@ -259,25 +357,14 @@
 
             const dataRef = document.getElementById('dataRegistro').value;
             let totalEfetivo = totalComputado;
-            if (isFinalDeSemana(dataRef) && totalComputado > 240) {
+            if (isFinalDeSemana(dataRef) && totalComputado > JORNADA_FIM_DE_SEMANA) {
                 const saidaAlmoco = minutosFromTime(f1);
                 const retornoAlmoco = minutosFromTime(i2);
                 const duracaoAlmoco = retornoAlmoco >= saidaAlmoco ? retornoAlmoco - saidaAlmoco : (1440 - saidaAlmoco) + retornoAlmoco;
                 totalEfetivo -= duracaoAlmoco;
             }
 
-            const jornadaInput = document.getElementById('jornadaDia').value.trim();
-            let jornadaPadrao;
-            if (jornadaInput) {
-                if (jornadaInput.includes(':')) {
-                    const p = jornadaInput.split(':');
-                    jornadaPadrao = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
-                } else {
-                    jornadaPadrao = Math.round(parseFloat(jornadaInput.replace(',', '.')) * 60);
-                }
-            } else {
-                jornadaPadrao = obterJornadaPorData(document.getElementById('dataRegistro').value);
-            }
+            const jornadaPadrao = obterJornadaPadrao(document.getElementById('dataRegistro').value);
 
             let bancoDiaMin = totalEfetivo - jornadaPadrao;
             if (bancoDiaMin > 0) {
@@ -285,7 +372,7 @@
                 bancoDiaMin = Math.round(bancoDiaMin * fator);
             }
             if (bancoDiaMin > 0 && bancoDiaMin < 6) bancoDiaMin = 0;
-            
+
             let textoInfo = `Banco dia: ${formatHoras(bancoDiaMin)}`;
             if (resultado.noturnos > 0) {
                 textoInfo += ` (Inclui ${formatHoras(resultado.noturnos)} noturnas)`;
@@ -311,24 +398,13 @@
             calcularDia();
 
             let horasDiaMin = resultado.trabalhadoMin;
-            if (isFinalDeSemana(data) && horasDiaMin > 240) {
+            if (isFinalDeSemana(data) && horasDiaMin > JORNADA_FIM_DE_SEMANA) {
                 const saidaAlmoco = minutosFromTime(f1);
                 const retornoAlmoco = minutosFromTime(i2);
                 const duracaoAlmoco = retornoAlmoco >= saidaAlmoco ? retornoAlmoco - saidaAlmoco : (1440 - saidaAlmoco) + retornoAlmoco;
                 horasDiaMin -= duracaoAlmoco;
             }
-            const jornadaInput = document.getElementById('jornadaDia').value.trim();
-            let jornadaPadrao;
-            if (jornadaInput) {
-                if (jornadaInput.includes(':')) {
-                    const p = jornadaInput.split(':');
-                    jornadaPadrao = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
-                } else {
-                    jornadaPadrao = Math.round(parseFloat(jornadaInput.replace(',', '.')) * 60);
-                }
-            } else {
-                jornadaPadrao = obterJornadaPorData(data);
-            }
+            const jornadaPadrao = obterJornadaPadrao(data);
             let bancoDiaMin = horasDiaMin - jornadaPadrao;
             if (bancoDiaMin > 0) {
                 const fator = 1 + (parseFloat(document.getElementById('percentualExtra').value) || 0) / 100;
@@ -363,37 +439,41 @@
             calcularDia();
         }
 
-        function toggleSaldo() {
-            const div = document.getElementById('conteudoSaldo');
-            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        function sortTabela(coluna) {
+            if (sortEstado.coluna === coluna) {
+                sortEstado.dir = sortEstado.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortEstado.coluna = coluna;
+                sortEstado.dir = (coluna === 0 || coluna === 3) ? 'desc' : 'asc';
+            }
+            document.querySelectorAll('#tabelaRegistros th').forEach((th, i) => {
+                th.textContent = th.textContent.replace(/ [▲▼]/g, '');
+                if (i === coluna) th.textContent += sortEstado.dir === 'asc' ? ' ▲' : ' ▼';
+            });
+            atualizarTabela();
         }
 
-        function toggleSaldo2() {
-            const div = document.getElementById('historico');
-            div.style.display = div.style.display === 'none' ? 'block' : 'none';
-        }
-        function toggleSaldo3() {
-            const div = document.getElementById('calculadora');
-            div.style.display = div.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function toggleHorarios() {
-            const div = document.getElementById('conteudoHorarios');
-            div.style.display = div.style.display === 'none' ? 'block' : 'none';
-        }
-        
         function atualizarTabela() {
-            // Ordena os registros da data mais recente para a mais antiga
-            registros.sort((a, b) => new Date(b.data) - new Date(a.data));
+            const copia = [...registros];
+            const dir = sortEstado.dir === 'asc' ? 1 : -1;
+
+            if (sortEstado.coluna === 0) {
+                copia.sort((a, b) => dir * (new Date(a.data) - new Date(b.data)));
+            } else if (sortEstado.coluna === 1) {
+                copia.sort((a, b) => dir * (a.horasDia - b.horasDia));
+            } else if (sortEstado.coluna === 2) {
+                copia.sort((a, b) => dir * (a.bancoDia - b.bancoDia));
+            } else if (sortEstado.coluna === 3) {
+                copia.sort((a, b) => dir * (a.data.localeCompare(b.data)));
+            }
 
             const tbody = document.querySelector('#tabelaRegistros tbody');
             tbody.innerHTML = '';
             let totalMin = 0;
 
             const saldoStr = localStorage.getItem('saldoAnteriorHoras') || '0';
-            
+
             let saldoMin = 0;
-            // Verifica se o usuário digitou no formato de relógio (ex: 10:30)
             if (saldoStr.includes(':')) {
                 const parts = saldoStr.split(':');
                 const h = parseInt(parts[0], 10) || 0;
@@ -401,30 +481,68 @@
                 saldoMin = (Math.abs(h) * 60) + Math.abs(m);
                 if (saldoStr.trim().startsWith('-')) saldoMin = -saldoMin;
             } else {
-                // Formato decimal (ex: 1.5 = 90min)
                 const val = parseFloat(saldoStr.replace(',', '.')) || 0;
                 saldoMin = Math.round(val * 60);
             }
-            
-            totalMin += saldoMin;
 
-            registros.forEach((reg, index) => {
+            totalMin += saldoMin;
+            const saldos = [];
+            copia.forEach(reg => {
                 totalMin += reg.bancoDia;
-                const row = tbody.insertRow();
-                row.style.cursor = 'pointer';
-                row.onclick = () => abrirModal(index);
-                const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
-                row.innerHTML = `
-                    <td>${formatData(reg.data)}</td>
-                    <td>${formatHoras(reg.horasDia)}</td>
-                    <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
-                `;
+                saldos.push(totalMin);
             });
 
-            const totalElement = document.getElementById('totalBanco');
-            const classeTotal = totalMin >= 0 ? 'total positivo' : 'total negativo';
-            totalElement.innerHTML = `Total Banco: <strong>${formatHoras(totalMin)}</strong>`;
-            totalElement.className = classeTotal;
+            if (sortEstado.coluna === 3) {
+                const indices = copia.map((_, i) => i);
+                indices.sort((a, b) => dir * (saldos[a] - saldos[b]));
+                tbody.innerHTML = '';
+                indices.forEach(i => {
+                    const reg = copia[i];
+                    const row = tbody.insertRow();
+                    row.style.cursor = 'pointer';
+                    const origIdx = registros.indexOf(reg);
+                    row.onclick = () => abrirModal(origIdx);
+                    const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
+                    const classeSaldo = saldos[i] >= 0 ? 'positivo' : 'negativo';
+                    row.innerHTML = `
+                        <td>${formatData(reg.data)}</td>
+                        <td>${formatHoras(reg.horasDia)}</td>
+                        <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
+                        <td class="${classeSaldo}">${formatHoras(saldos[i])}</td>
+                    `;
+                });
+            } else {
+                copia.forEach((reg, i) => {
+                    const row = tbody.insertRow();
+                    row.style.cursor = 'pointer';
+                    const origIdx = registros.indexOf(reg);
+                    row.onclick = () => abrirModal(origIdx);
+                    const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
+                    const classeSaldo = saldos[i] >= 0 ? 'positivo' : 'negativo';
+                    row.innerHTML = `
+                        <td>${formatData(reg.data)}</td>
+                        <td>${formatHoras(reg.horasDia)}</td>
+                        <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
+                        <td class="${classeSaldo}">${formatHoras(saldos[i])}</td>
+                    `;
+                });
+            }
+
+            // Atualiza total nos dois lugares
+            const classeTotal = totalMin >= 0 ? 'positivo' : 'negativo';
+            const el = document.getElementById('totalBanco');
+            el.innerHTML = `Total Banco: <strong>${formatHoras(totalMin)}</strong>`;
+            el.className = `total ${classeTotal}`;
+        }
+
+        function aplicarFiltro() {
+            const termo = document.getElementById('filtroHistorico').value.toLowerCase();
+            const tbody = document.querySelector('#tabelaRegistros tbody');
+            const linhas = tbody.querySelectorAll('tr');
+            linhas.forEach(linha => {
+                const texto = linha.textContent.toLowerCase();
+                linha.style.display = texto.includes(termo) ? '' : 'none';
+            });
         }
 
         function abrirModal(index) {
@@ -459,24 +577,13 @@
             if (!resultado) return alert('❌ Horários inválidos!');
 
             let horasDiaMin = resultado.trabalhadoMin;
-            if (isFinalDeSemana(data) && horasDiaMin > 240) {
+            if (isFinalDeSemana(data) && horasDiaMin > JORNADA_FIM_DE_SEMANA) {
                 const saidaAlmoco = minutosFromTime(f1);
                 const retornoAlmoco = minutosFromTime(i2);
                 const duracaoAlmoco = retornoAlmoco >= saidaAlmoco ? retornoAlmoco - saidaAlmoco : (1440 - saidaAlmoco) + retornoAlmoco;
                 horasDiaMin -= duracaoAlmoco;
             }
-            const jornadaInput = document.getElementById('jornadaDia').value.trim();
-            let jornadaPadrao;
-            if (jornadaInput) {
-                if (jornadaInput.includes(':')) {
-                    const p = jornadaInput.split(':');
-                    jornadaPadrao = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
-                } else {
-                    jornadaPadrao = Math.round(parseFloat(jornadaInput.replace(',', '.')) * 60);
-                }
-            } else {
-                jornadaPadrao = obterJornadaPorData(data);
-            }
+            const jornadaPadrao = obterJornadaPadrao(data);
             let bancoDiaMin = horasDiaMin - jornadaPadrao;
             if (bancoDiaMin > 0) {
                 const fator = 1 + (parseFloat(document.getElementById('percentualExtra').value) || 0) / 100;
@@ -510,7 +617,6 @@
 
             if (!salario || !divisor || !horasStr) return alert('Preencha Salário, Divisor e Horas!');
 
-            // Converte HH:MM para horas decimais
             const parts = horasStr.split(':');
             const h = parseInt(parts[0], 10);
             const m = parseInt(parts[1], 10) || 0;
@@ -544,6 +650,8 @@
 
         const jornadaSalva = localStorage.getItem('jornadaDiaHoras') || '';
         document.getElementById('jornadaDia').value = jornadaSalva;
+        const jornadaFdsSalva = localStorage.getItem('jornadaFdsHoras') || '04:00';
+        document.getElementById('jornadaFds').value = jornadaFdsSalva;
 
         calcularDia();
         atualizarTabela();
