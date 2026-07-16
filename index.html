@@ -160,10 +160,10 @@
                 <input type="text" id="filtroHistorico" placeholder="🔍 Filtrar por data, valor..." oninput="aplicarFiltro()">
                 <table id="tabelaRegistros">
                     <thead><tr>
-                        <th onclick="sortTabela(0)" id="th0" style="cursor:pointer">Data ▼</th>
-                        <th onclick="sortTabela(1)" id="th1" style="cursor:pointer">H. dia</th>
-                        <th onclick="sortTabela(2)" id="th2" style="cursor:pointer">Banco</th>
-                        <th onclick="sortTabela(3)" id="th3" style="cursor:pointer">Saldo</th>
+                        <th onclick="sortTabela()" id="th0" style="cursor:pointer">Data ▼</th>
+                        <th id="th1">H. dia</th>
+                        <th id="th2">Banco</th>
+                        <th id="th3">Saldo</th>
                     </tr></thead>
                     <tbody></tbody>
                 </table>
@@ -231,7 +231,7 @@
         const JORNADA_SEMANA = 480;
         const JORNADA_FIM_DE_SEMANA = 240;
 
-        let sortEstado = { coluna: 0, dir: 'desc' };
+        let sortEstado = { dir: 'desc' };
 
         // Menu
         function abrirMenu() {
@@ -439,17 +439,9 @@
             calcularDia();
         }
 
-        function sortTabela(coluna) {
-            if (sortEstado.coluna === coluna) {
-                sortEstado.dir = sortEstado.dir === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortEstado.coluna = coluna;
-                sortEstado.dir = (coluna === 0 || coluna === 3) ? 'desc' : 'asc';
-            }
-            document.querySelectorAll('#tabelaRegistros th').forEach((th, i) => {
-                th.textContent = th.textContent.replace(/ [▲▼]/g, '');
-                if (i === coluna) th.textContent += sortEstado.dir === 'asc' ? ' ▲' : ' ▼';
-            });
+        function sortTabela() {
+            sortEstado.dir = sortEstado.dir === 'desc' ? 'asc' : 'desc';
+            document.getElementById('th0').textContent = 'Data ' + (sortEstado.dir === 'asc' ? '▲' : '▼');
             atualizarTabela();
         }
 
@@ -457,22 +449,9 @@
             const copia = [...registros];
             const dir = sortEstado.dir === 'asc' ? 1 : -1;
 
-            if (sortEstado.coluna === 0) {
-                copia.sort((a, b) => dir * (new Date(a.data) - new Date(b.data)));
-            } else if (sortEstado.coluna === 1) {
-                copia.sort((a, b) => dir * (a.horasDia - b.horasDia));
-            } else if (sortEstado.coluna === 2) {
-                copia.sort((a, b) => dir * (a.bancoDia - b.bancoDia));
-            } else if (sortEstado.coluna === 3) {
-                copia.sort((a, b) => dir * (a.data.localeCompare(b.data)));
-            }
-
-            const tbody = document.querySelector('#tabelaRegistros tbody');
-            tbody.innerHTML = '';
-            let totalMin = 0;
+            copia.sort((a, b) => dir * (new Date(a.data) - new Date(b.data)));
 
             const saldoStr = localStorage.getItem('saldoAnteriorHoras') || '0';
-
             let saldoMin = 0;
             if (saldoStr.includes(':')) {
                 const parts = saldoStr.split(':');
@@ -485,53 +464,36 @@
                 saldoMin = Math.round(val * 60);
             }
 
-            totalMin += saldoMin;
-            const saldos = [];
-            copia.forEach(reg => {
-                totalMin += reg.bancoDia;
-                saldos.push(totalMin);
+            const ascending = [...registros].sort((a, b) => new Date(a.data) - new Date(b.data));
+            const saldoMap = new Map();
+            let total = saldoMin;
+            ascending.forEach(reg => {
+                total += reg.bancoDia;
+                saldoMap.set(reg, total);
             });
 
-            if (sortEstado.coluna === 3) {
-                const indices = copia.map((_, i) => i);
-                indices.sort((a, b) => dir * (saldos[a] - saldos[b]));
-                tbody.innerHTML = '';
-                indices.forEach(i => {
-                    const reg = copia[i];
-                    const row = tbody.insertRow();
-                    row.style.cursor = 'pointer';
-                    const origIdx = registros.indexOf(reg);
-                    row.onclick = () => abrirModal(origIdx);
-                    const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
-                    const classeSaldo = saldos[i] >= 0 ? 'positivo' : 'negativo';
-                    row.innerHTML = `
-                        <td>${formatData(reg.data)}</td>
-                        <td>${formatHoras(reg.horasDia)}</td>
-                        <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
-                        <td class="${classeSaldo}">${formatHoras(saldos[i])}</td>
-                    `;
-                });
-            } else {
-                copia.forEach((reg, i) => {
-                    const row = tbody.insertRow();
-                    row.style.cursor = 'pointer';
-                    const origIdx = registros.indexOf(reg);
-                    row.onclick = () => abrirModal(origIdx);
-                    const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
-                    const classeSaldo = saldos[i] >= 0 ? 'positivo' : 'negativo';
-                    row.innerHTML = `
-                        <td>${formatData(reg.data)}</td>
-                        <td>${formatHoras(reg.horasDia)}</td>
-                        <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
-                        <td class="${classeSaldo}">${formatHoras(saldos[i])}</td>
-                    `;
-                });
-            }
+            const tbody = document.querySelector('#tabelaRegistros tbody');
+            tbody.innerHTML = '';
 
-            // Atualiza total nos dois lugares
-            const classeTotal = totalMin >= 0 ? 'positivo' : 'negativo';
+            copia.forEach(reg => {
+                const row = tbody.insertRow();
+                row.style.cursor = 'pointer';
+                const origIdx = registros.indexOf(reg);
+                row.onclick = () => abrirModal(origIdx);
+                const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
+                const saldoReg = saldoMap.get(reg) || 0;
+                const classeSaldo = saldoReg >= 0 ? 'positivo' : 'negativo';
+                row.innerHTML = `
+                    <td>${formatData(reg.data)}</td>
+                    <td>${formatHoras(reg.horasDia)}</td>
+                    <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
+                    <td class="${classeSaldo}">${formatHoras(saldoReg)}</td>
+                `;
+            });
+
+            const classeTotal = total >= 0 ? 'positivo' : 'negativo';
             const el = document.getElementById('totalBanco');
-            el.innerHTML = `Total Banco: <strong>${formatHoras(totalMin)}</strong>`;
+            el.innerHTML = `Total Banco: <strong>${formatHoras(total)}</strong>`;
             el.className = `total ${classeTotal}`;
         }
 
