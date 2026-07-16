@@ -3,208 +3,478 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🕐 Banco de Horas</title>
+    <title>Banco de Horas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1000px; margin: 0 auto; padding: 20px;
-            background: linear-gradient(135deg, #c0c2ca 0%, #7776a165 100%);
-            min-height: 100vh; color: #333;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            color: #1a1a2e;
+            line-height: 1.5;
         }
-        .container { background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); padding: 30px; margin: 20px 0; }
 
-        /* Topo com menu sanduíche e título */
+        .app-wrapper {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+
+        /* Topo */
         .topo {
-            display: flex; align-items: center; gap: 15px;
-            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 24px;
+            background: #1a1a2e;
+            color: #fff;
         }
         .menu-btn {
-            font-size: 24px; cursor: pointer; background: none; border: none;
-            width: auto; padding: 5px 10px; color: #2c3e50;
+            font-size: 20px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            width: auto;
+            margin: 0;
+            font-size: 14px;
         }
-        .menu-btn:hover { transform: none; }
-        h1 { text-align: center; color: #2c3e50; font-size: 1.2em; flex: 1; }
+        .menu-btn:hover { background: rgba(255,255,255,0.1); transform: none; box-shadow: none; }
+        h1 {
+            text-align: center;
+            color: #fff;
+            font-size: 1.05em;
+            font-weight: 600;
+            flex: 1;
+            letter-spacing: -0.01em;
+        }
 
-        /* Menu sanduíche */
+        /* Total saldo banner */
+        .total {
+            font-size: 0.95em;
+            font-weight: 600;
+            text-align: center;
+            padding: 14px 20px;
+            margin: 0;
+            border-radius: 0;
+            background: #f8f9fb;
+            border-bottom: 1px solid #e8eaed;
+            box-shadow: none;
+            letter-spacing: -0.01em;
+        }
+        .positivo { color: #0d9668 !important; }
+        .negativo { color: #dc2626 !important; }
+
+        /* Menu lateral */
         .menu-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4); z-index: 999;
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 999;
+            backdrop-filter: blur(2px);
         }
         .menu-overlay.ativo { display: block; }
         .menu-lateral {
-            position: fixed; top: 0; left: -280px; width: 260px; height: 100%;
-            background: white; z-index: 1000; transition: left 0.3s;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.2); padding: 20px;
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: #ffffff;
+            z-index: 1000;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+            padding: 0;
             overflow-y: auto;
         }
         .menu-lateral.aberto { left: 0; }
-        .menu-lateral h3 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 15px; }
-        .menu-item {
-            display: block; width: 100%; padding: 12px 10px; margin: 5px 0;
-            text-align: left; background: #f8f9fa; border: 1px solid #ddd;
-            border-radius: 8px; cursor: pointer; font-size: 14px; color: #333;
-            text-transform: none; letter-spacing: normal;
+        .menu-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e8eaed;
         }
-        .menu-item:hover { background: #e8f4fd; transform: none; box-shadow: none; }
+        .menu-header h3 {
+            color: #1a1a2e;
+            font-size: 1em;
+            font-weight: 600;
+        }
+        .menu-nav { padding: 12px; }
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 11px 16px;
+            margin: 2px 0;
+            text-align: left;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875em;
+            font-weight: 500;
+            color: #444;
+            text-transform: none;
+            letter-spacing: normal;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .menu-item:hover {
+            background: #f0f2f5;
+            transform: none;
+            box-shadow: none;
+        }
 
-        /* Painéis de conteúdo */
-        .painel { display: none; }
+        /* Painéis */
+        .painel { display: none; padding: 20px 24px; }
         .painel.ativo { display: block; }
 
         .section {
-            background: #f8f9fa; margin-bottom: 25px; padding: 25px; border-radius: 15px;
-            border: 2px solid #929496; box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            background: transparent;
+            margin-bottom: 0;
+            padding: 0;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
         }
-        .section h2 { color: #2c3e50; margin-top: 0; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 15px; }
-        label { display: block; margin: 5px 0; font-weight: 500; color: #555; }
-        input, button {
-            width: 100%; padding: 8px; margin: 4px 0; font-size: 14px; border: 1px solid #ddd;
-            border-radius: 5px; transition: all 0.3s; box-sizing: border-box;
-        }
-        input:focus { border-color: #3498db; outline: none; box-shadow: 0 0 10px rgba(52,152,219,0.3); }
-        button {
-            background: linear-gradient(45deg, #3498db, #2980b9); color: white; border: none;
-            font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
-        }
-        button:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(52,152,219,0.3); }
 
-        .horas-display { font-size: 1em; font-weight: bold; padding: 10px; background: white; border-radius: 5px; text-align: center; margin: 10px 0; }
-        .horarios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        /* Labels e inputs */
+        label {
+            display: block;
+            margin: 8px 0 4px;
+            font-weight: 500;
+            color: #555;
+            font-size: 0.825em;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px 12px;
+            margin: 2px 0;
+            font-size: 0.875em;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            transition: all 0.2s;
+            box-sizing: border-box;
+            font-family: inherit;
+            background: #fff;
+            color: #1a1a2e;
+        }
+        input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+        }
+        input::placeholder { color: #9ca3af; }
+        button {
+            background: #1a1a2e;
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            letter-spacing: 0.01em;
+            margin-top: 12px;
+        }
+        button:hover {
+            background: #2d2d4a;
+            transform: none;
+            box-shadow: 0 2px 8px rgba(26,26,46,0.25);
+        }
+
+        .horas-display {
+            font-size: 0.9em;
+            font-weight: 600;
+            padding: 12px;
+            background: #f8f9fb;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            text-align: center;
+            margin: 12px 0;
+            color: #444;
+        }
+        .horarios-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 12px;
+        }
         .horarios-grid label { margin: 0; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; border-radius: 5px; overflow: hidden; box-shadow: 0 5px 10px rgba(0,0,0,0.1); }
-        th { background: linear-gradient(45deg, #34495e, #2c3e50); color: white; padding: 8px; font-weight: bold; user-select: none; }
-        th:hover { background: linear-gradient(45deg, #2c3e50, #1a252f); }
-        td { padding: 6px; text-align: center; border-bottom: 1px solid #eee; }
-        tr:hover { background: #e8f4fd; }
-
-        .total {
-            font-size: 1.2em; font-weight: bold; text-align: center; padding: 5px;
-            border-radius: 15px; margin: 2px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        /* Tabela */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e8eaed;
         }
-        .positivo { color: #27ae60 !important; }
-        .negativo { color: #e74c3c !important; }
-        .btn-limpar { background: linear-gradient(45deg, #e74c3c, #c0392b); margin-top: 15px; }
+        th {
+            background: #1a1a2e;
+            color: #fff;
+            padding: 10px 12px;
+            font-weight: 600;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            user-select: none;
+        }
+        th:hover { background: #2d2d4a; }
+        td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid #f0f2f5;
+            font-size: 0.875em;
+        }
+        tr { transition: background 0.15s; }
+        tr:hover { background: #f8f9fb; }
+        tr:last-child td { border-bottom: none; }
 
         #filtroHistorico {
-            width: 100%; padding: 10px; margin-bottom: 15px; font-size: 14px;
-            border: 2px solid #3498db; border-radius: 8px; background: #f0f8ff;
+            width: 100%;
+            padding: 10px 12px 10px 36px;
+            font-size: 0.875em;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834ZM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0Z'/%3E%3C/svg%3E") no-repeat 12px center;
+        }
+        #filtroHistorico:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+            outline: none;
         }
 
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1001; justify-content: center; align-items: center; }
+        .btn-limpar {
+            background: #fff;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            margin-top: 16px;
+        }
+        .btn-limpar:hover {
+            background: #fef2f2;
+            box-shadow: none;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+        }
         .modal-overlay.ativo { display: flex; }
-        .modal { background: white; border-radius: 15px; padding: 25px; width: 90%; max-width: 450px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        .modal h2 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        .modal-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .modal-botoes button { padding: 10px; font-size: 12px; }
-        .btn-salvar { background: linear-gradient(45deg, #27ae60, #219a52); }
-        .btn-excluir { background: linear-gradient(45deg, #e74c3c, #c0392b); }
-        .btn-fechar { background: linear-gradient(45deg, #95a5a6, #7f8c8d); grid-column: 1 / -1; }
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .modal h2 {
+            margin-top: 0;
+            color: #1a1a2e;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-bottom: 1px solid #e8eaed;
+            padding-bottom: 14px;
+            margin-bottom: 8px;
+        }
+        .modal-botoes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-botoes button { padding: 10px; font-size: 0.825em; margin-top: 0; }
+        .btn-salvar { background: #0d9668; }
+        .btn-salvar:hover { background: #0b8560; }
+        .btn-excluir { background: #dc2626; }
+        .btn-excluir:hover { background: #c41e1e; }
+        .btn-fechar {
+            background: #f3f4f6;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+            grid-column: 1 / -1;
+        }
+        .btn-fechar:hover { background: #e5e7eb; box-shadow: none; }
+
+        /* Calculadora resultado */
+        #resultadoValor {
+            display: none;
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+            font-size: 0.9em;
+            line-height: 1.8;
+        }
+
+        /* Section headers via labels */
+        .section-title {
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 16px 0 8px;
+        }
+        .section-title:first-child { margin-top: 0; }
 
         @media (max-width: 768px) {
-            body { padding: 5px; }
-            .container { padding: 15px; margin: 10px 0; border-radius: 10px; }
-            h1 { font-size: 1em; }
-            .section { padding: 15px; }
-            table { font-size: 12px; width: 100%; }
-            .total { font-size: 1.5em; padding: 5px; }
-            input, button { font-size: 12px; }
+            .app-wrapper { padding: 0; }
+            .container { border-radius: 0; box-shadow: none; }
+            .painel { padding: 16px; }
+            h1 { font-size: 0.95em; }
+            table { font-size: 0.8em; }
+            .horarios-grid { gap: 6px 8px; }
+            input, button { font-size: 0.8em; padding: 9px 10px; }
+            .total { font-size: 0.85em; padding: 12px 16px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Topo -->
-        <div class="topo">
-            <button class="menu-btn" onclick="abrirMenu()">☰</button>
-            <h1>🕐 Banco de Horas</h1>
-            <div style="width:40px"></div>
-        </div>
+    <div class="app-wrapper">
+        <div class="container">
+            <!-- Topo -->
+            <div class="topo">
+                <button class="menu-btn" onclick="abrirMenu()">&#9776;</button>
+                <h1>Banco de Horas</h1>
+                <div style="width:36px"></div>
+            </div>
 
-        <!-- Menu sanduíche -->
-        <div class="menu-overlay" id="menuOverlay" onclick="fecharMenu()"></div>
-        <div class="menu-lateral" id="menuLateral">
-            <h3>📋 Menu</h3>
-            <button class="menu-item" onclick="abrirPainel('principal')">🏠 Principal (Saldo)</button>
-            <button class="menu-item" onclick="abrirPainel('horarios')">📅 Lançar Horários</button>
-            <button class="menu-item" onclick="abrirPainel('historico')">📊 Histórico</button>
-            <button class="menu-item" onclick="abrirPainel('calculadora')">💸 Calculadora</button>
-            <button class="menu-item" onclick="abrirPainel('config')">⚙️ Configurações</button>
-        </div>
-
-        <!-- Saldo fixo no topo (sempre visível) -->
-        <div class="total" id="totalBanco">Total Banco: 0h 0min</div>
-
-        <!-- Painel Principal -->
-        <div class="painel ativo" id="painelPrincipal"></div>
-
-        <!-- Painel Lançar Horários -->
-        <div class="painel" id="painelHorarios">
-            <div class="section">
-                <label>Data: <input type="date" id="dataRegistro" onchange="calcularDia()"></label>
-                <div class="horarios-grid">
-                    <label>Entrada Manhã: <input type="time" id="inicio1" value="07:00" oninput="calcularDia()"></label>
-                    <label>Saída Almoço: <input type="time" id="fim1" value="12:00" oninput="calcularDia()"></label>
-                    <label>Retorno Almoço: <input type="time" id="inicio2" value="13:00" oninput="calcularDia()"></label>
-                    <label>Saída Tarde: <input type="time" id="fim2" value="16:00" oninput="calcularDia()"></label>
+            <!-- Menu lateral -->
+            <div class="menu-overlay" id="menuOverlay" onclick="fecharMenu()"></div>
+            <div class="menu-lateral" id="menuLateral">
+                <div class="menu-header"><h3>Menu</h3></div>
+                <div class="menu-nav">
+                    <button class="menu-item" onclick="abrirPainel('principal')">Principal (Saldo)</button>
+                    <button class="menu-item" onclick="abrirPainel('horarios')">Lancar Horarios</button>
+                    <button class="menu-item" onclick="abrirPainel('historico')">Historico</button>
+                    <button class="menu-item" onclick="abrirPainel('calculadora')">Calculadora</button>
+                    <button class="menu-item" onclick="abrirPainel('config')">Configuracoes</button>
                 </div>
-                <div id="horasDia" class="horas-display">Preencha os horários</div>
-                <button onclick="salvarRegistro()">💾 Salvar</button>
             </div>
-        </div>
 
-        <!-- Painel Histórico -->
-        <div class="painel" id="painelHistorico">
-            <div class="section">
-                <input type="text" id="filtroHistorico" placeholder="🔍 Filtrar por data, valor..." oninput="aplicarFiltro()">
-                <table id="tabelaRegistros">
-                    <thead><tr>
-                        <th onclick="sortTabela()" id="th0" style="cursor:pointer">Data ▼</th>
-                        <th id="th1">H. dia</th>
-                        <th id="th2">Banco</th>
-                        <th id="th3">Saldo</th>
-                    </tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
+            <!-- Saldo total -->
+            <div class="total" id="totalBanco">Total Banco: 0h 0min</div>
 
-        <!-- Painel Calculadora -->
-        <div class="painel" id="painelCalculadora">
-            <div class="section">
-                <div class="horarios-grid">
-                    <label>Salário Base (R$): <input type="number" id="calcSalario" placeholder="Ex: 2500.00"></label>
-                    <label>Divisor Mensal: <input type="number" id="calcDivisor" value="220" placeholder="Padrão 220"></label>
-                    <label>Qtd. Horas (HH:MM): <input type="text" id="calcHoras" placeholder="Ex: 10:30"></label>
-                    <label>% Adicional: <input type="number" id="calcPercentual" value="50" placeholder="50"></label>
-                    <label>Dias Úteis: <input type="number" id="calcDiasUteis" value="25" placeholder="Ex: 25"></label>
-                    <label>Dom/Feriados: <input type="number" id="calcDomingosFeriados" value="5" placeholder="Ex: 5"></label>
+            <!-- Painel Principal -->
+            <div class="painel ativo" id="painelPrincipal"></div>
+
+            <!-- Painel Lancar Horarios -->
+            <div class="painel" id="painelHorarios">
+                <div class="section">
+                    <div class="section-title">Dados do Dia</div>
+                    <label>Data</label>
+                    <input type="date" id="dataRegistro" onchange="calcularDia()">
+                    <div class="horarios-grid">
+                        <div>
+                            <label>Entrada Manha</label>
+                            <input type="time" id="inicio1" value="07:00" oninput="calcularDia()">
+                        </div>
+                        <div>
+                            <label>Saida Almoco</label>
+                            <input type="time" id="fim1" value="12:00" oninput="calcularDia()">
+                        </div>
+                        <div>
+                            <label>Retorno Almoco</label>
+                            <input type="time" id="inicio2" value="13:00" oninput="calcularDia()">
+                        </div>
+                        <div>
+                            <label>Saida Tarde</label>
+                            <input type="time" id="fim2" value="16:00" oninput="calcularDia()">
+                        </div>
+                    </div>
+                    <div id="horasDia" class="horas-display">Preencha os horarios</div>
+                    <button onclick="salvarRegistro()">Salvar Registro</button>
                 </div>
-                <button onclick="calcularValorExtra()">💰 Calcular Valor a Receber</button>
-                <div id="resultadoValor" class="total" style="display:none; background: #d4edda; color: #155724; font-size: 1.2em;"></div>
             </div>
-        </div>
 
-        <!-- Painel Configurações -->
-        <div class="painel" id="painelConfig">
-            <div class="section">
-                <label>Saldo Anterior:
+            <!-- Painel Historico -->
+            <div class="painel" id="painelHistorico">
+                <div class="section">
+                    <input type="text" id="filtroHistorico" placeholder="Filtrar por data, valor..." oninput="aplicarFiltro()">
+                    <table id="tabelaRegistros">
+                        <thead><tr>
+                            <th onclick="sortTabela()" id="th0" style="cursor:pointer">Data &#9660;</th>
+                            <th id="th1">H. dia</th>
+                            <th id="th2">Banco</th>
+                            <th id="th3">Saldo</th>
+                        </tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Painel Calculadora -->
+            <div class="painel" id="painelCalculadora">
+                <div class="section">
+                    <div class="section-title">Calcular Valor Hora Extra</div>
+                    <div class="horarios-grid">
+                        <div>
+                            <label>Salario Base (R$)</label>
+                            <input type="number" id="calcSalario" placeholder="Ex: 2500.00">
+                        </div>
+                        <div>
+                            <label>Divisor Mensal</label>
+                            <input type="number" id="calcDivisor" value="220" placeholder="Padrao 220">
+                        </div>
+                        <div>
+                            <label>Qtd. Horas (HH:MM)</label>
+                            <input type="text" id="calcHoras" placeholder="Ex: 10:30">
+                        </div>
+                        <div>
+                            <label>% Adicional</label>
+                            <input type="number" id="calcPercentual" value="50" placeholder="50">
+                        </div>
+                        <div>
+                            <label>Dias Uteis</label>
+                            <input type="number" id="calcDiasUteis" value="25" placeholder="Ex: 25">
+                        </div>
+                        <div>
+                            <label>Dom/Feriados</label>
+                            <input type="number" id="calcDomingosFeriados" value="5" placeholder="Ex: 5">
+                        </div>
+                    </div>
+                    <button onclick="calcularValorExtra()">Calcular Valor a Receber</button>
+                    <div id="resultadoValor" class="total"></div>
+                </div>
+            </div>
+
+            <!-- Painel Configuracoes -->
+            <div class="painel" id="painelConfig">
+                <div class="section">
+                    <div class="section-title">Configuracoes Gerais</div>
+                    <label>Saldo Anterior</label>
                     <input type="text" id="saldoAnterior" placeholder="Ex: 10:30 ou -5.5" oninput="salvarSaldoAnterior()">
-                </label>
-                <label>Percentual Extra (%):
+                    <label>Percentual Extra (%)</label>
                     <input type="number" id="percentualExtra" value="50" placeholder="Ex: 50" oninput="salvarPercentual()">
-                </label>
-                <label>Jornada Semana (HH:MM):
+                    <label>Jornada Semana (HH:MM)</label>
                     <input type="text" id="jornadaDia" placeholder="Ex: 08:00" oninput="calcularDia(); localStorage.setItem('jornadaDiaHoras', this.value);">
-                </label>
-                <label>Jornada Fim de Semana (HH:MM):
+                    <label>Jornada Fim de Semana (HH:MM)</label>
                     <input type="text" id="jornadaFds" placeholder="Ex: 04:00" oninput="calcularDia(); localStorage.setItem('jornadaFdsHoras', this.value);">
-                </label>
-                <button class="btn-limpar" onclick="limparHistorico()">🗑️ Limpar Histórico</button>
+                    <button class="btn-limpar" onclick="limparHistorico()">Limpar Historico</button>
+                </div>
             </div>
-        </div>
 
+        </div>
     </div>
 
     <!-- Modal Editar -->
@@ -212,11 +482,16 @@
         <div class="modal" onclick="event.stopPropagation()">
             <h2>Editar Registro</h2>
             <input type="hidden" id="modalIndex">
-            <label>Data: <input type="date" id="modalData"></label>
-            <label>Entrada Manhã: <input type="time" id="modalI1"></label>
-            <label>Saída Almoço: <input type="time" id="modalF1"></label>
-            <label>Retorno Almoço: <input type="time" id="modalI2"></label>
-            <label>Saída Tarde: <input type="time" id="modalF2"></label>
+            <label>Data</label>
+            <input type="date" id="modalData">
+            <label>Entrada Manha</label>
+            <input type="time" id="modalI1">
+            <label>Saida Almoco</label>
+            <input type="time" id="modalF1">
+            <label>Retorno Almoco</label>
+            <input type="time" id="modalI2">
+            <label>Saida Tarde</label>
+            <input type="time" id="modalF2">
             <div class="modal-botoes">
                 <button class="btn-salvar" onclick="salvarEdicao()">Salvar</button>
                 <button class="btn-excluir" onclick="excluirDoModal()">Excluir</button>
@@ -233,7 +508,6 @@
 
         let sortEstado = { dir: 'desc' };
 
-        // Menu
         function abrirMenu() {
             document.getElementById('menuOverlay').classList.add('ativo');
             document.getElementById('menuLateral').classList.add('aberto');
@@ -348,7 +622,7 @@
             const resultado = calcularJornada(i1, f1, i2, f2);
 
             if (!resultado) {
-                document.getElementById('horasDia').textContent = 'Preencha os horários';
+                document.getElementById('horasDia').textContent = 'Preencha os horarios';
                 document.getElementById('horasDia').className = 'horas-display';
                 return;
             }
@@ -383,7 +657,7 @@
 
         function salvarRegistro() {
             const data = document.getElementById('dataRegistro').value;
-            if (!data) return alert('❌ Selecione a data!');
+            if (!data) return alert('Selecione a data!');
 
             const i1 = document.getElementById('inicio1').value;
             const f1 = document.getElementById('fim1').value;
@@ -392,7 +666,7 @@
 
             const resultado = calcularJornada(i1, f1, i2, f2);
             if (!resultado) {
-                return alert('❌ Horários inválidos!');
+                return alert('Horarios invalidos!');
             }
 
             calcularDia();
@@ -416,15 +690,15 @@
             localStorage.setItem('bancoHoras', JSON.stringify(registros));
             atualizarTabela();
             document.getElementById('dataRegistro').value = '';
-            alert(`✅ Salvo! Banco dia: ${formatHoras(bancoDiaMin)}`);
+            alert(`Salvo! Banco dia: ${formatHoras(bancoDiaMin)}`);
         }
 
         function limparHistorico() {
-            if (confirm('🗑️ Limpar TODO histórico?')) {
+            if (confirm('Limpar TODO historico?')) {
                 registros = [];
                 localStorage.removeItem('bancoHoras');
                 atualizarTabela();
-                alert('✅ Histórico limpo!');
+                alert('Historico limpo!');
             }
         }
 
@@ -441,7 +715,7 @@
 
         function sortTabela() {
             sortEstado.dir = sortEstado.dir === 'desc' ? 'asc' : 'desc';
-            document.getElementById('th0').textContent = 'Data ' + (sortEstado.dir === 'asc' ? '▲' : '▼');
+            document.getElementById('th0').textContent = 'Data ' + (sortEstado.dir === 'asc' ? '\u25B2' : '\u25BC');
             atualizarTabela();
         }
 
@@ -533,10 +807,10 @@
             const i2 = document.getElementById('modalI2').value;
             const f2 = document.getElementById('modalF2').value;
 
-            if (!data) return alert('❌ Selecione a data!');
+            if (!data) return alert('Selecione a data!');
 
             const resultado = calcularJornada(i1, f1, i2, f2);
-            if (!resultado) return alert('❌ Horários inválidos!');
+            if (!resultado) return alert('Horarios invalidos!');
 
             let horasDiaMin = resultado.trabalhadoMin;
             if (isFinalDeSemana(data) && horasDiaMin > JORNADA_FIM_DE_SEMANA) {
@@ -561,7 +835,7 @@
 
         function excluirDoModal() {
             const index = parseInt(document.getElementById('modalIndex').value);
-            if (confirm('🗑️ Deseja excluir este registro?')) {
+            if (confirm('Deseja excluir este registro?')) {
                 registros.splice(index, 1);
                 localStorage.setItem('bancoHoras', JSON.stringify(registros));
                 atualizarTabela();
@@ -577,7 +851,7 @@
             const diasUteis = parseFloat(document.getElementById('calcDiasUteis').value);
             const domingos = parseFloat(document.getElementById('calcDomingosFeriados').value);
 
-            if (!salario || !divisor || !horasStr) return alert('Preencha Salário, Divisor e Horas!');
+            if (!salario || !divisor || !horasStr) return alert('Preencha Salario, Divisor e Horas!');
 
             const parts = horasStr.split(':');
             const h = parseInt(parts[0], 10);
@@ -600,7 +874,6 @@
                                 <strong>A Receber: ${totalReceber.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</strong>`;
         }
 
-        // Inicializar
         const hoje = new Date().toISOString().split('T')[0];
         document.getElementById('dataRegistro').value = hoje;
 
