@@ -410,6 +410,8 @@
                             <input type="time" id="fim2" value="16:00" oninput="calcularDia()">
                         </div>
                     </div>
+                    <label>Jornada do Dia (HH:MM)</label>
+                    <input type="text" id="jornadaLancamento" placeholder="Vazio usa o padrao da config" oninput="salvarJornadaLancamento()">
                     <div id="horasDia" class="horas-display">Preencha os horarios</div>
                     <button onclick="salvarRegistro()">Salvar Registro</button>
                 </div>
@@ -422,6 +424,7 @@
                     <table id="tabelaRegistros">
                         <thead><tr>
                             <th onclick="sortTabela()" id="th0" style="cursor:pointer">Data &#9660;</th>
+                            <th>Jornada</th>
                             <th id="th1">H. dia</th>
                             <th id="th2">Banco</th>
                             <th id="th3">Saldo</th>
@@ -588,6 +591,20 @@
             return obterJornadaPorData(data);
         }
 
+        function salvarJornadaLancamento() {
+            localStorage.setItem('jornadaLancamento', document.getElementById('jornadaLancamento').value);
+            calcularDia();
+        }
+
+        function obterJornadaLancamento(data) {
+            const campo = document.getElementById('jornadaLancamento');
+            if (campo) {
+                const parsed = _parseJornadaInput(campo.value);
+                if (parsed !== null) return parsed;
+            }
+            return obterJornadaPadrao(data);
+        }
+
         function calcularJornada(i1, f1, i2, f2) {
             const m_i1 = minutosFromTime(i1);
             const m_f1 = minutosFromTime(f1);
@@ -640,7 +657,7 @@
 
             const totalComputado = Math.round(resultado.trabalhadoMin);
 
-            const jornadaPadrao = obterJornadaPadrao(document.getElementById('dataRegistro').value);
+            const jornadaPadrao = obterJornadaLancamento(document.getElementById('dataRegistro').value);
 
             const bancoBaseMin = totalComputado - jornadaPadrao;
             const percentualBanco = obterPercentualBanco();
@@ -651,7 +668,7 @@
 
             const totalComBanco = calcularTotalBanco(bancoDiaMin);
 
-            let textoInfo = `Banco dia: <strong>${formatHoras(bancoDiaMin)}</strong>`;
+            let textoInfo = `Jornada: <strong>${formatHoras(jornadaPadrao)}</strong> | Banco dia: <strong>${formatHoras(bancoDiaMin)}</strong>`;
             if (bancoBaseMin > 0 && percentualBanco > 0) {
                 textoInfo += ` (base ${formatHoras(bancoBaseMin)} + ${percentualBanco}%)`;
             }
@@ -680,7 +697,7 @@
             calcularDia();
 
             const horasDiaMin = Math.round(resultado.trabalhadoMin);
-            const jornadaPadrao = obterJornadaPadrao(data);
+            const jornadaPadrao = obterJornadaLancamento(data);
             const bancoBaseMin = horasDiaMin - jornadaPadrao;
             const percentualBanco = obterPercentualBanco();
             let bancoDiaMin = bancoBaseMin;
@@ -801,19 +818,21 @@
                 const horariosTexto = times
                     ? `${times.i1} - ${times.f1} &nbsp;&nbsp; ${times.i2} - ${times.f2}`
                     : '-';
+                const jornadaReg = reg.jornada != null ? reg.jornada : obterJornadaPadrao(reg.data);
 
                 const row1 = tbody.insertRow();
                 row1.style.cursor = 'pointer';
                 row1.onclick = () => abrirModal(origIdx);
                 row1.innerHTML = `
                     <td rowspan="2">${formatData(reg.data)}</td>
-                    <td colspan="3">${horariosTexto}</td>
+                    <td colspan="4">${horariosTexto}</td>
                 `;
 
                 const row2 = tbody.insertRow();
                 row2.style.cursor = 'pointer';
                 row2.onclick = () => abrirModal(origIdx);
                 row2.innerHTML = `
+                    <td>${formatHoras(jornadaReg)}</td>
                     <td>${formatHoras(reg.horasDia)}</td>
                     <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
                     <td class="${classeSaldo}">${formatHoras(saldoReg)}</td>
@@ -925,6 +944,8 @@
             const calc = calcularHorasEBanco(data, i1, f1, i2, f2, jornadaMin);
             if (!calc) return alert('Horarios invalidos!');
 
+            if (!confirm('Deseja salvar as alteracoes deste registro?')) return;
+
             registros[index] = {data, horasDia: calc.horasDia, bancoDia: calc.bancoDia, jornada: jornadaMin, times: {i1, f1, i2, f2}};
             localStorage.setItem('bancoHoras', JSON.stringify(registros));
             atualizarTabela();
@@ -991,6 +1012,9 @@
         document.getElementById('jornadaDia').value = jornadaSalva;
         const jornadaFdsSalva = localStorage.getItem('jornadaFdsHoras') || '04:00';
         document.getElementById('jornadaFds').value = jornadaFdsSalva;
+
+        const jornadaLancSalva = localStorage.getItem('jornadaLancamento') || '';
+        document.getElementById('jornadaLancamento').value = jornadaLancSalva;
 
         calcularDia();
         recalcularRegistros();
