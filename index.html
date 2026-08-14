@@ -575,11 +575,14 @@
 
         function _parseJornadaInput(valor) {
             if (!valor) return null;
+            let parsed;
             if (valor.includes(':')) {
                 const p = valor.split(':');
-                return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+                parsed = (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+            } else {
+                parsed = Math.round(parseFloat(valor.replace(',', '.')) * 60);
             }
-            return Math.round(parseFloat(valor.replace(',', '.')) * 60);
+            return isNaN(parsed) ? null : parsed;
         }
 
         function obterJornadaPadrao(data) {
@@ -822,6 +825,7 @@
 
                 const row1 = tbody.insertRow();
                 row1.style.cursor = 'pointer';
+                row1.setAttribute('data-grupo', origIdx);
                 row1.onclick = () => abrirModal(origIdx);
                 row1.innerHTML = `
                     <td rowspan="2">${formatData(reg.data)}</td>
@@ -830,6 +834,7 @@
 
                 const row2 = tbody.insertRow();
                 row2.style.cursor = 'pointer';
+                row2.setAttribute('data-grupo', origIdx);
                 row2.onclick = () => abrirModal(origIdx);
                 row2.innerHTML = `
                     <td>${formatHoras(jornadaReg)}</td>
@@ -849,9 +854,20 @@
             const termo = document.getElementById('filtroHistorico').value.toLowerCase();
             const tbody = document.querySelector('#tabelaRegistros tbody');
             const linhas = tbody.querySelectorAll('tr');
+
+            const grupos = new Map();
             linhas.forEach(linha => {
-                const texto = linha.textContent.toLowerCase();
-                linha.style.display = texto.includes(termo) ? '' : 'none';
+                const g = linha.getAttribute('data-grupo');
+                if (g == null) return;
+                if (!grupos.has(g)) grupos.set(g, { texto: '' });
+                grupos.get(g).texto += ' ' + linha.textContent.toLowerCase();
+            });
+
+            linhas.forEach(linha => {
+                const g = linha.getAttribute('data-grupo');
+                if (g == null) return;
+                const visivel = grupos.get(g).texto.includes(termo);
+                linha.style.display = visivel ? '' : 'none';
             });
         }
 
