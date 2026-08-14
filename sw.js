@@ -1,4 +1,4 @@
-const CACHE = 'banco-horas-v1';
+const CACHE = 'banco-horas-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -19,6 +19,11 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET' || url.pathname.startsWith('/api/')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then((cached) => {
       if (cached) return cached;

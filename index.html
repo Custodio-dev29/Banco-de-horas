@@ -478,9 +478,15 @@
                     <label>Percentual Banco de Horas (%)</label>
                     <input type="number" id="percentualBanco" value="50" placeholder="Ex: 50" oninput="salvarPercentualBanco()">
                     <label>Jornada Semana (HH:MM)</label>
-                    <input type="text" id="jornadaDia" placeholder="Ex: 08:00" oninput="calcularDia(); localStorage.setItem('jornadaDiaHoras', this.value);">
+                    <input type="text" id="jornadaDia" placeholder="Ex: 08:00" oninput="salvarJornadaConfig('jornadaDia', 'jornadaDiaHoras')">
                     <label>Jornada Fim de Semana (HH:MM)</label>
-                    <input type="text" id="jornadaFds" placeholder="Ex: 04:00" oninput="calcularDia(); localStorage.setItem('jornadaFdsHoras', this.value);">
+                    <input type="text" id="jornadaFds" placeholder="Ex: 04:00" oninput="salvarJornadaConfig('jornadaFds', 'jornadaFdsHoras')">
+                    <div class="section-title">Backup</div>
+                    <div class="horarios-grid">
+                        <button onclick="exportarDados()">Exportar JSON</button>
+                        <button onclick="document.getElementById('fileImportar').click()">Importar JSON</button>
+                        <input type="file" id="fileImportar" accept=".json,application/json" style="display:none" onchange="importarDados(event)">
+                    </div>
                     <button class="btn-limpar" onclick="limparHistorico()">Limpar Historico</button>
                 </div>
             </div>
@@ -597,6 +603,66 @@
         function salvarJornadaLancamento() {
             localStorage.setItem('jornadaLancamento', document.getElementById('jornadaLancamento').value);
             calcularDia();
+        }
+
+        function salvarJornadaConfig(campoId, lsKey) {
+            localStorage.setItem(lsKey, document.getElementById(campoId).value);
+            calcularDia();
+        }
+
+        function exportarDados() {
+            const dados = {
+                registros,
+                saldoAnterior: document.getElementById('saldoAnterior').value,
+                percentualBanco: document.getElementById('percentualBanco').value,
+                jornadaDia: document.getElementById('jornadaDia').value,
+                jornadaFds: document.getElementById('jornadaFds').value,
+                jornadaLancamento: document.getElementById('jornadaLancamento').value
+            };
+            const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'banco-de-horas.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importarDados(event) {
+            const file = event.target.files && event.target.files[0];
+            event.target.value = '';
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const dados = JSON.parse(reader.result);
+                    if (!Array.isArray(dados.registros)) {
+                        alert('Arquivo invalido.');
+                        return;
+                    }
+                    registros = dados.registros;
+                    if (dados.saldoAnterior != null) document.getElementById('saldoAnterior').value = dados.saldoAnterior;
+                    if (dados.percentualBanco != null) document.getElementById('percentualBanco').value = dados.percentualBanco;
+                    if (dados.jornadaDia != null) document.getElementById('jornadaDia').value = dados.jornadaDia;
+                    if (dados.jornadaFds != null) document.getElementById('jornadaFds').value = dados.jornadaFds;
+                    if (dados.jornadaLancamento != null) document.getElementById('jornadaLancamento').value = dados.jornadaLancamento;
+                    localStorage.setItem('bancoHoras', JSON.stringify(registros));
+                    localStorage.setItem('saldoAnteriorHoras', dados.saldoAnterior || '');
+                    localStorage.setItem('percentualBanco', dados.percentualBanco || '50');
+                    localStorage.setItem('jornadaDiaHoras', dados.jornadaDia || '');
+                    localStorage.setItem('jornadaFdsHoras', dados.jornadaFds || '04:00');
+                    localStorage.setItem('jornadaLancamento', dados.jornadaLancamento || '');
+                    calcularDia();
+                    recalcularRegistros();
+                    atualizarTabela();
+                    alert('Dados importados com sucesso!');
+                } catch (e) {
+                    alert('Arquivo invalido.');
+                }
+            };
+            reader.readAsText(file);
         }
 
         function obterJornadaLancamento(data) {
