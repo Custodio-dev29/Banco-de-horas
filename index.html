@@ -2,8 +2,16 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Banco de Horas">
     <title>Banco de Horas</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -34,7 +42,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 16px 24px;
+            padding: calc(16px + env(safe-area-inset-top)) 24px 16px;
             background: #1a1a2e;
             color: #fff;
         }
@@ -437,12 +445,12 @@
                             <input type="number" id="calcDivisor" value="220" placeholder="Padrao 220">
                         </div>
                         <div>
-                            <label>Qtd. Horas (HH:MM)</label>
-                            <input type="text" id="calcHoras" placeholder="Ex: 10:30">
+                            <label>Horas Extras 50% (HH:MM)</label>
+                            <input type="text" id="calcHoras50" placeholder="Ex: 10:30">
                         </div>
                         <div>
-                            <label>% Adicional</label>
-                            <input type="number" id="calcPercentual" value="50" placeholder="50">
+                            <label>Horas Extras 100% (Dom/Feriados)</label>
+                            <input type="text" id="calcHoras100" placeholder="Ex: 02:00">
                         </div>
                         <div>
                             <label>Dias Uteis</label>
@@ -464,8 +472,8 @@
                     <div class="section-title">Configuracoes Gerais</div>
                     <label>Saldo Anterior</label>
                     <input type="text" id="saldoAnterior" placeholder="Ex: 10:30 ou -5.5" oninput="salvarSaldoAnterior()">
-                    <label>Percentual Extra (%)</label>
-                    <input type="number" id="percentualExtra" value="50" placeholder="Ex: 50" oninput="salvarPercentual()">
+                    <label>Percentual Banco de Horas (%)</label>
+                    <input type="number" id="percentualBanco" value="50" placeholder="Ex: 50" oninput="salvarPercentualBanco()">
                     <label>Jornada Semana (HH:MM)</label>
                     <input type="text" id="jornadaDia" placeholder="Ex: 08:00" oninput="calcularDia(); localStorage.setItem('jornadaDiaHoras', this.value);">
                     <label>Jornada Fim de Semana (HH:MM)</label>
@@ -483,15 +491,18 @@
             <h2>Editar Registro</h2>
             <input type="hidden" id="modalIndex">
             <label>Data</label>
-            <input type="date" id="modalData">
+            <input type="date" id="modalData" oninput="atualizarResumoModal()">
             <label>Entrada Manha</label>
-            <input type="time" id="modalI1">
+            <input type="time" id="modalI1" oninput="atualizarResumoModal()">
             <label>Saida Almoco</label>
-            <input type="time" id="modalF1">
+            <input type="time" id="modalF1" oninput="atualizarResumoModal()">
             <label>Retorno Almoco</label>
-            <input type="time" id="modalI2">
+            <input type="time" id="modalI2" oninput="atualizarResumoModal()">
             <label>Saida Tarde</label>
-            <input type="time" id="modalF2">
+            <input type="time" id="modalF2" oninput="atualizarResumoModal()">
+            <label>Jornada do Dia (HH:MM)</label>
+            <input type="text" id="modalJornada" placeholder="Ex: 08:00" oninput="atualizarResumoModal()">
+            <div id="resumoModal" class="horas-display"></div>
             <div class="modal-botoes">
                 <button class="btn-salvar" onclick="salvarEdicao()">Salvar</button>
                 <button class="btn-excluir" onclick="excluirDoModal()">Excluir</button>
@@ -525,9 +536,9 @@
 
         function formatHoras(minutos) {
             const sinal = minutos < 0 ? '-' : '';
-            const absMin = Math.abs(minutos);
-            const h = Math.floor(absMin / 60);
-            const m = ('0' + (absMin % 60)).slice(-2);
+            const total = Math.round(Math.abs(minutos));
+            const h = Math.floor(total / 60);
+            const m = ('0' + (total % 60)).slice(-2);
             return `${sinal}${h}:${m}`;
         }
 
@@ -627,31 +638,28 @@
                 return;
             }
 
-            const totalComputado = resultado.trabalhadoMin;
-
-            const dataRef = document.getElementById('dataRegistro').value;
-            let totalEfetivo = totalComputado;
-            if (isFinalDeSemana(dataRef) && totalComputado > JORNADA_FIM_DE_SEMANA) {
-                const saidaAlmoco = minutosFromTime(f1);
-                const retornoAlmoco = minutosFromTime(i2);
-                const duracaoAlmoco = retornoAlmoco >= saidaAlmoco ? retornoAlmoco - saidaAlmoco : (1440 - saidaAlmoco) + retornoAlmoco;
-                totalEfetivo -= duracaoAlmoco;
-            }
+            const totalComputado = Math.round(resultado.trabalhadoMin);
 
             const jornadaPadrao = obterJornadaPadrao(document.getElementById('dataRegistro').value);
 
-            let bancoDiaMin = totalEfetivo - jornadaPadrao;
-            if (bancoDiaMin > 0) {
-                const fator = 1 + (parseFloat(document.getElementById('percentualExtra').value) || 0) / 100;
-                bancoDiaMin = Math.round(bancoDiaMin * fator);
+            const bancoBaseMin = totalComputado - jornadaPadrao;
+            const percentualBanco = obterPercentualBanco();
+            let bancoDiaMin = bancoBaseMin;
+            if (bancoDiaMin > 0 && percentualBanco > 0) {
+                bancoDiaMin = Math.round(bancoDiaMin * (1 + percentualBanco / 100));
             }
-            if (bancoDiaMin > 0 && bancoDiaMin < 6) bancoDiaMin = 0;
 
-            let textoInfo = `Banco dia: ${formatHoras(bancoDiaMin)}`;
+            const totalComBanco = calcularTotalBanco(bancoDiaMin);
+
+            let textoInfo = `Banco dia: <strong>${formatHoras(bancoDiaMin)}</strong>`;
+            if (bancoBaseMin > 0 && percentualBanco > 0) {
+                textoInfo += ` (base ${formatHoras(bancoBaseMin)} + ${percentualBanco}%)`;
+            }
             if (resultado.noturnos > 0) {
                 textoInfo += ` (Inclui ${formatHoras(resultado.noturnos)} noturnas)`;
             }
-            document.getElementById('horasDia').textContent = textoInfo;
+            textoInfo += `<br>Total banco: <strong>${formatHoras(totalComBanco)}</strong>`;
+            document.getElementById('horasDia').innerHTML = textoInfo;
             document.getElementById('horasDia').className = bancoDiaMin >= 0 ? 'horas-display positivo' : 'horas-display negativo';
         }
 
@@ -671,22 +679,16 @@
 
             calcularDia();
 
-            let horasDiaMin = resultado.trabalhadoMin;
-            if (isFinalDeSemana(data) && horasDiaMin > JORNADA_FIM_DE_SEMANA) {
-                const saidaAlmoco = minutosFromTime(f1);
-                const retornoAlmoco = minutosFromTime(i2);
-                const duracaoAlmoco = retornoAlmoco >= saidaAlmoco ? retornoAlmoco - saidaAlmoco : (1440 - saidaAlmoco) + retornoAlmoco;
-                horasDiaMin -= duracaoAlmoco;
-            }
+            const horasDiaMin = Math.round(resultado.trabalhadoMin);
             const jornadaPadrao = obterJornadaPadrao(data);
-            let bancoDiaMin = horasDiaMin - jornadaPadrao;
-            if (bancoDiaMin > 0) {
-                const fator = 1 + (parseFloat(document.getElementById('percentualExtra').value) || 0) / 100;
-                bancoDiaMin = Math.round(bancoDiaMin * fator);
+            const bancoBaseMin = horasDiaMin - jornadaPadrao;
+            const percentualBanco = obterPercentualBanco();
+            let bancoDiaMin = bancoBaseMin;
+            if (bancoDiaMin > 0 && percentualBanco > 0) {
+                bancoDiaMin = Math.round(bancoDiaMin * (1 + percentualBanco / 100));
             }
-            if (bancoDiaMin > 0 && bancoDiaMin < 6) bancoDiaMin = 0;
 
-            registros.unshift({data, horasDia: horasDiaMin, bancoDia: bancoDiaMin, times: {i1, f1, i2, f2}});
+            registros.unshift({data, horasDia: horasDiaMin, bancoDia: bancoDiaMin, jornada: jornadaPadrao, times: {i1, f1, i2, f2}});
             localStorage.setItem('bancoHoras', JSON.stringify(registros));
             atualizarTabela();
             document.getElementById('dataRegistro').value = '';
@@ -708,9 +710,61 @@
             atualizarTabela();
         }
 
-        function salvarPercentual() {
-            localStorage.setItem('percentualExtra', document.getElementById('percentualExtra').value);
+        function obterPercentualBanco() {
+            const el = document.getElementById('percentualBanco');
+            const valor = el ? parseFloat(el.value) : NaN;
+            return isNaN(valor) ? 0 : valor;
+        }
+
+        function salvarPercentualBanco() {
+            localStorage.setItem('percentualBanco', document.getElementById('percentualBanco').value);
+            recalcularRegistros();
             calcularDia();
+        }
+
+        function recalcularRegistros() {
+            const percentualBanco = obterPercentualBanco();
+            let alterado = false;
+            registros.forEach(reg => {
+                const jornada = reg.jornada != null ? reg.jornada : obterJornadaPadrao(reg.data);
+                const base = reg.horasDia - jornada;
+                let banco = base;
+                if (banco > 0 && percentualBanco > 0) {
+                    banco = Math.round(banco * (1 + percentualBanco / 100));
+                }
+                if (reg.bancoDia !== banco) {
+                    reg.bancoDia = banco;
+                    reg.jornada = jornada;
+                    alterado = true;
+                }
+            });
+            if (alterado) localStorage.setItem('bancoHoras', JSON.stringify(registros));
+            atualizarTabela();
+        }
+
+        function _lerSaldoAnterior() {
+            const saldoStr = localStorage.getItem('saldoAnteriorHoras') || '0';
+            let saldoMin = 0;
+            if (saldoStr.includes(':')) {
+                const parts = saldoStr.split(':');
+                const h = parseInt(parts[0], 10) || 0;
+                const m = parseInt(parts[1], 10) || 0;
+                saldoMin = (Math.abs(h) * 60) + Math.abs(m);
+                if (saldoStr.trim().startsWith('-')) saldoMin = -saldoMin;
+            } else {
+                const val = parseFloat(saldoStr.replace(',', '.')) || 0;
+                saldoMin = Math.round(val * 60);
+            }
+            return saldoMin;
+        }
+
+        function calcularTotalBanco(bonusMin, substituirIdx) {
+            let total = _lerSaldoAnterior();
+            registros.forEach((reg, i) => {
+                if (i === substituirIdx) return;
+                total += reg.bancoDia;
+            });
+            return total + (bonusMin || 0);
         }
 
         function sortTabela() {
@@ -725,18 +779,7 @@
 
             copia.sort((a, b) => dir * (new Date(a.data) - new Date(b.data)));
 
-            const saldoStr = localStorage.getItem('saldoAnteriorHoras') || '0';
-            let saldoMin = 0;
-            if (saldoStr.includes(':')) {
-                const parts = saldoStr.split(':');
-                const h = parseInt(parts[0], 10) || 0;
-                const m = parseInt(parts[1], 10) || 0;
-                saldoMin = (Math.abs(h) * 60) + Math.abs(m);
-                if (saldoStr.trim().startsWith('-')) saldoMin = -saldoMin;
-            } else {
-                const val = parseFloat(saldoStr.replace(',', '.')) || 0;
-                saldoMin = Math.round(val * 60);
-            }
+            const saldoMin = _lerSaldoAnterior();
 
             const ascending = [...registros].sort((a, b) => new Date(a.data) - new Date(b.data));
             const saldoMap = new Map();
@@ -750,15 +793,27 @@
             tbody.innerHTML = '';
 
             copia.forEach(reg => {
-                const row = tbody.insertRow();
-                row.style.cursor = 'pointer';
                 const origIdx = registros.indexOf(reg);
-                row.onclick = () => abrirModal(origIdx);
-                const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
                 const saldoReg = saldoMap.get(reg) || 0;
+                const classeBanco = reg.bancoDia >= 0 ? 'positivo' : 'negativo';
                 const classeSaldo = saldoReg >= 0 ? 'positivo' : 'negativo';
-                row.innerHTML = `
-                    <td>${formatData(reg.data)}</td>
+                const times = reg.times;
+                const horariosTexto = times
+                    ? `${times.i1} - ${times.f1} &nbsp;&nbsp; ${times.i2} - ${times.f2}`
+                    : '-';
+
+                const row1 = tbody.insertRow();
+                row1.style.cursor = 'pointer';
+                row1.onclick = () => abrirModal(origIdx);
+                row1.innerHTML = `
+                    <td rowspan="2">${formatData(reg.data)}</td>
+                    <td colspan="3">${horariosTexto}</td>
+                `;
+
+                const row2 = tbody.insertRow();
+                row2.style.cursor = 'pointer';
+                row2.onclick = () => abrirModal(origIdx);
+                row2.innerHTML = `
                     <td>${formatHoras(reg.horasDia)}</td>
                     <td class="${classeBanco}">${formatHoras(reg.bancoDia)}</td>
                     <td class="${classeSaldo}">${formatHoras(saldoReg)}</td>
@@ -781,6 +836,58 @@
             });
         }
 
+        function calcularHorasEBanco(data, i1, f1, i2, f2, jornadaMin) {
+            const resultado = calcularJornada(i1, f1, i2, f2);
+            if (!resultado) return null;
+
+            const horasDiaMin = Math.round(resultado.trabalhadoMin);
+            const jornadaPadrao = jornadaMin != null ? jornadaMin : obterJornadaPadrao(data);
+            const bancoBaseMin = horasDiaMin - jornadaPadrao;
+            const percentualBanco = obterPercentualBanco();
+            let bancoDiaMin = bancoBaseMin;
+            if (bancoDiaMin > 0 && percentualBanco > 0) {
+                bancoDiaMin = Math.round(bancoDiaMin * (1 + percentualBanco / 100));
+            }
+
+            return { horasDia: horasDiaMin, bancoDia: bancoDiaMin, bancoBase: bancoBaseMin, percentual: percentualBanco, jornadaPadrao };
+        }
+
+        function atualizarResumoModal() {
+            const data = document.getElementById('modalData').value;
+            const i1 = document.getElementById('modalI1').value;
+            const f1 = document.getElementById('modalF1').value;
+            const i2 = document.getElementById('modalI2').value;
+            const f2 = document.getElementById('modalF2').value;
+            const resumoEl = document.getElementById('resumoModal');
+
+            if (!data || !i1 || !f1 || !i2 || !f2) {
+                resumoEl.textContent = 'Preencha os horarios';
+                resumoEl.className = 'horas-display';
+                return;
+            }
+
+            let jornadaMin = _parseJornadaInput(document.getElementById('modalJornada').value);
+            if (jornadaMin === null) jornadaMin = obterJornadaPadrao(data);
+
+            const calc = calcularHorasEBanco(data, i1, f1, i2, f2, jornadaMin);
+            if (!calc) {
+                resumoEl.textContent = 'Horarios invalidos';
+                resumoEl.className = 'horas-display';
+                return;
+            }
+
+            const classeBanco = calc.bancoDia >= 0 ? 'positivo' : 'negativo';
+            let resumo = `Jornada do dia: <strong>${formatHoras(calc.jornadaPadrao)}</strong><br>Banco do dia: <strong class="${classeBanco}">${formatHoras(calc.bancoDia)}</strong>`;
+            if (calc.bancoBase > 0 && calc.percentual > 0) {
+                resumo += ` (base ${formatHoras(calc.bancoBase)} + ${calc.percentual}%)`;
+            }
+            const index = parseInt(document.getElementById('modalIndex').value);
+            const totalComBanco = calcularTotalBanco(calc.bancoDia, isNaN(index) ? -1 : index);
+            resumo += `<br>Total banco: <strong>${formatHoras(totalComBanco)}</strong>`;
+            resumoEl.innerHTML = resumo;
+            resumoEl.className = 'horas-display';
+        }
+
         function abrirModal(index) {
             const reg = registros[index];
             document.getElementById('modalIndex').value = index;
@@ -791,7 +898,10 @@
                 document.getElementById('modalI2').value = reg.times.i2;
                 document.getElementById('modalF2').value = reg.times.f2;
             }
+            const jornadaSalva = reg.jornada != null ? reg.jornada : obterJornadaPadrao(reg.data);
+            document.getElementById('modalJornada').value = formatHoras(jornadaSalva);
             document.getElementById('modalEditar').classList.add('ativo');
+            atualizarResumoModal();
         }
 
         function fecharModal(e) {
@@ -809,25 +919,13 @@
 
             if (!data) return alert('Selecione a data!');
 
-            const resultado = calcularJornada(i1, f1, i2, f2);
-            if (!resultado) return alert('Horarios invalidos!');
+            let jornadaMin = _parseJornadaInput(document.getElementById('modalJornada').value);
+            if (jornadaMin === null) jornadaMin = obterJornadaPadrao(data);
 
-            let horasDiaMin = resultado.trabalhadoMin;
-            if (isFinalDeSemana(data) && horasDiaMin > JORNADA_FIM_DE_SEMANA) {
-                const saidaAlmoco = minutosFromTime(f1);
-                const retornoAlmoco = minutosFromTime(i2);
-                const duracaoAlmoco = retornoAlmoco >= saidaAlmoco ? retornoAlmoco - saidaAlmoco : (1440 - saidaAlmoco) + retornoAlmoco;
-                horasDiaMin -= duracaoAlmoco;
-            }
-            const jornadaPadrao = obterJornadaPadrao(data);
-            let bancoDiaMin = horasDiaMin - jornadaPadrao;
-            if (bancoDiaMin > 0) {
-                const fator = 1 + (parseFloat(document.getElementById('percentualExtra').value) || 0) / 100;
-                bancoDiaMin = Math.round(bancoDiaMin * fator);
-            }
-            if (bancoDiaMin > 0 && bancoDiaMin < 6) bancoDiaMin = 0;
+            const calc = calcularHorasEBanco(data, i1, f1, i2, f2, jornadaMin);
+            if (!calc) return alert('Horarios invalidos!');
 
-            registros[index] = {data, horasDia: horasDiaMin, bancoDia: bancoDiaMin, times: {i1, f1, i2, f2}};
+            registros[index] = {data, horasDia: calc.horasDia, bancoDia: calc.bancoDia, jornada: jornadaMin, times: {i1, f1, i2, f2}};
             localStorage.setItem('bancoHoras', JSON.stringify(registros));
             atualizarTabela();
             fecharModal();
@@ -846,28 +944,34 @@
         function calcularValorExtra() {
             const salario = parseFloat(document.getElementById('calcSalario').value.replace(',', '.'));
             const divisor = parseFloat(document.getElementById('calcDivisor').value);
-            const horasStr = document.getElementById('calcHoras').value;
-            const percentual = parseFloat(document.getElementById('calcPercentual').value);
+            const horas50 = document.getElementById('calcHoras50').value;
+            const horas100 = document.getElementById('calcHoras100').value;
             const diasUteis = parseFloat(document.getElementById('calcDiasUteis').value);
             const domingos = parseFloat(document.getElementById('calcDomingosFeriados').value);
 
-            if (!salario || !divisor || !horasStr) return alert('Preencha Salario, Divisor e Horas!');
+            if (!salario || !divisor || (!horas50 && !horas100)) return alert('Preencha Salario, Divisor e Horas!');
 
-            const parts = horasStr.split(':');
-            const h = parseInt(parts[0], 10);
-            const m = parseInt(parts[1], 10) || 0;
-            const totalHorasDecimais = h + (m / 60);
+            const horasDecimais = (str) => {
+                if (!str) return 0;
+                const parts = str.split(':');
+                return (parseInt(parts[0], 10) || 0) + ((parseInt(parts[1], 10) || 0) / 60);
+            };
+
+            const horas50Dec = horasDecimais(horas50);
+            const horas100Dec = horasDecimais(horas100);
 
             const valorHoraBase = salario / divisor;
-            const valorHoraExtra = valorHoraBase * (1 + (percentual / 100));
-            const totalHE = valorHoraExtra * totalHorasDecimais;
+            const valorHE50 = valorHoraBase * 1.5 * horas50Dec;
+            const valorHE100 = valorHoraBase * 2.0 * horas100Dec;
+            const totalHE = valorHE50 + valorHE100;
             const valorDSR = (totalHE / (diasUteis || 1)) * (domingos || 0);
             const totalReceber = totalHE + valorDSR;
 
             const divRes = document.getElementById('resultadoValor');
             divRes.style.display = 'block';
             divRes.innerHTML = `Valor Hora Base: ${valorHoraBase.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
-                                Valor Hora Extra (${percentual}%): ${valorHoraExtra.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
+                                Horas Extras 50% (${horas50Dec.toFixed(2)}h): ${valorHE50.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
+                                Horas Extras 100% (${horas100Dec.toFixed(2)}h): ${valorHE100.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
                                 Total HE: ${totalHE.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
                                 DSR (${domingos}/${diasUteis}): ${valorDSR.toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}<br>
                                 --------------------------<br>
@@ -880,8 +984,8 @@
         const saldoSalvo = localStorage.getItem('saldoAnteriorHoras') || '';
         document.getElementById('saldoAnterior').value = saldoSalvo;
 
-        const percSalvo = localStorage.getItem('percentualExtra') || '50';
-        document.getElementById('percentualExtra').value = percSalvo;
+        const percBancoSalvo = localStorage.getItem('percentualBanco') || '50';
+        document.getElementById('percentualBanco').value = percBancoSalvo;
 
         const jornadaSalva = localStorage.getItem('jornadaDiaHoras') || '';
         document.getElementById('jornadaDia').value = jornadaSalva;
@@ -889,7 +993,12 @@
         document.getElementById('jornadaFds').value = jornadaFdsSalva;
 
         calcularDia();
+        recalcularRegistros();
         atualizarTabela();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
     </script>
 </body>
 </html>
